@@ -22,14 +22,13 @@ import numpy as np
 from warp.solver.get_energy_tensor import get_energy_tensor
 
 tensor = np.zeros((4, 4, 2, 2, 2, 2))
-for i in range(2):
-    for j in range(2):
-        for k in range(2):
-            for l in range(2):
-                tensor[0, 0, i, j, k, l] = -1  # g_tt = -1
-                tensor[1, 1, i, j, k, l] = 1   # g_xx = 1
-                tensor[2, 2, i, j, k, l] = 1   # g_yy = 1
-                tensor[3, 3, i, j, k, l] = 1   # g_zz = 1
+
+# Define the values for the diagonal elements
+values = [-1, 1, 1, 1]
+
+# Assign values to the diagonal elements for all combinations of the last four indices
+for idx in range(4):
+    tensor[idx, idx, :, :, :, :] = values[idx]
 
 metric = {
     'type': "Metric",
