@@ -36,7 +36,7 @@ def verify_tensor(input_tensor, suppress_msgs=False):
     # Tensor
     if 'tensor' in input_tensor:
         tensor = input_tensor['tensor']
-        if isinstance(tensor, np.ndarray) and tensor.shape == (4, 4, *tensor.shape[2:]) and tensor.ndim == 4:
+        if isinstance(tensor, np.ndarray) and tensor.shape[:2] == (4, 4) and tensor.ndim == 6:
             disp_message("tensor: Verified", suppress_msgs)
         else:
             warnings.warn("Tensor is not formatted correctly. Tensor must be a 4x4 array of 4D values.")
