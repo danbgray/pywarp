@@ -4,23 +4,6 @@ Pywarp is a set of functions and methods to evaluate warp drive spacetimes using
 
 PyWarp is a Python package for calculating the energy tensor from a given metric tensor using Einstein's Field Equations. This package provides a set of functions to compute various tensors, including the Ricci tensor, Ricci scalar, Einstein tensor, and the energy density tensor.
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-- [Functions](#functions)
-  - [takeFiniteDifference1](#takeFiniteDifference1)
-  - [takeFiniteDifference2](#takeFiniteDifference2)
-  - [ricciS](#ricciS)
-  - [einT](#einT)
-  - [einE](#einE)
-  - [met2den](#met2den)
-  - [met2den2](#met2den2)
-  - [get_energy_tensor](#get_energy_tensor)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## Installation
 
 To install PyWarp, you can clone the repository and install the required dependencies:
