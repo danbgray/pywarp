@@ -11,8 +11,7 @@ To install PyWarp, you can clone the repository and install the required depende
 ```bash
 git clone https://github.com/yourusername/pywarp.git
 cd pywarp
-pipenv install;
-pipenv shell
+./scripts/install.sh
 ```
 
 ## Usage
