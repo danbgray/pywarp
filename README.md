@@ -44,6 +44,16 @@ energy = get_energy_tensor(metric, diffOrder='fourth')
 print("Energy Tensor:", energy)
 ```
 
+## Notebooks
+
+Example notebooks are located in the `notebooks/` directory. Start Jupyter and open
+`intro.ipynb` to see a full workflow that builds a metric, computes its energy tensor
+and visualizes the result using Plotly.
+
+```bash
+jupyter notebook notebooks/intro.ipynb
+```
+
 # pywarp
 
 
