@@ -38,6 +38,7 @@ def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, s
     for x0, y0, z0 in zip(StrPtsX, StrPtsY, StrPtsZ):
         path = np.zeros((max_steps, 3))
         path[0] = [x0, y0, z0]
+        step_count = 1
 
         for i in range(max_steps - 1):
             pos = path[i]
@@ -45,9 +46,9 @@ def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, s
                 break
 
             # Interpolate the momentum
-            momentum_x = interpolator_x(pos)
-            momentum_y = interpolator_y(pos)
-            momentum_z = interpolator_z(pos)
+            momentum_x = float(interpolator_x(pos))
+            momentum_y = float(interpolator_y(pos))
+            momentum_z = float(interpolator_z(pos))
             momentum = np.array([momentum_x, momentum_y, momentum_z])
 
             if np.any(np.isnan(momentum)):
@@ -55,8 +56,9 @@ def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, s
 
             # Propagate position
             path[i + 1] = pos + momentum * step_size
+            step_count += 1
 
-        paths.append(path[:i + 1])
+        paths.append(path[:step_count])
 
     return paths
 
