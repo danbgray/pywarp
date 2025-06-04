@@ -78,6 +78,16 @@ developing, run:
 ```bash
 maturin develop
 ```
-
 This command compiles the `warp_core` crate and installs it into the current
 environment.
+
+## Testing
+
+The test suite uses `pytest`. Make sure the project dependencies are installed
+before running the tests:
+
+```bash
+pipenv install; pipenv shell
+pytest
+```
+
