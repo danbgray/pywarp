@@ -19,7 +19,7 @@ cd pywarp
 To use PyWarp, you can import the necessary functions and pass the required parameters. Here is an example:
 ```
 import numpy as np
-from warp.solver.get_energy_tensor import get_energy_tensor
+from warp.core import energy_tensor
 
 tensor = np.zeros((4, 4, 2, 2, 2, 2))
 
@@ -39,7 +39,7 @@ metric = {
     'name': "Minkowski"
 }
 
-energy = get_energy_tensor(metric, diffOrder='fourth')
+energy = energy_tensor(metric, diff_order='fourth')
 
 print("Energy Tensor:", energy)
 ```
