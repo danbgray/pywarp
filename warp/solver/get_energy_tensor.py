@@ -1,40 +1,24 @@
 import numpy as np
 from datetime import date
 
-def c4Inv(tensor):
-    """
-    Computes the inverse of each 4x4 sub-tensor within an n-dimensional tensor.
+try:
+    from warp_core import c4_inv as c4Inv
+except Exception:  # fallback to python implementation
+    def c4Inv(tensor):
+        """Fallback Python implementation of blockwise 4x4 matrix inversion."""
+        if tensor.shape[0] != 4 or tensor.shape[1] != 4:
+            raise ValueError("The first two dimensions of the input tensor must be of size 4.")
 
-    Args:
-    - tensor (np.ndarray): An n-dimensional tensor where the first two dimensions are 4x4 matrices.
-
-    Returns:
-    - inv_tensor (np.ndarray): An n-dimensional tensor of the same shape as the input,
-      where each 4x4 sub-tensor has been inverted. If a sub-tensor is singular and cannot
-      be inverted, it is replaced by the 4x4 identity matrix.
-    """
-    # Ensure the tensor has at least 2 dimensions of size 4 for inversion
-    if tensor.shape[0] != 4 or tensor.shape[1] != 4:
-        raise ValueError("The first two dimensions of the input tensor must be of size 4.")
-
-    # Flatten the remaining dimensions into one dimension
-    reshaped_tensor = tensor.reshape(4, 4, -1)
-
-    # Initialize an array to store the inverted sub-tensors
-    inv_tensor = np.zeros_like(reshaped_tensor)
-
-    # Loop through the flattened dimension and invert each sub-tensor
-    for idx in range(reshaped_tensor.shape[2]):
-        sub_tensor = reshaped_tensor[:, :, idx]
-        try:
-            inv_tensor[:, :, idx] = np.linalg.inv(sub_tensor)
-        except np.linalg.LinAlgError:
-            inv_tensor[:, :, idx] = np.eye(4)
-
-    # Reshape the inverted tensor back to its original shape
-    inv_tensor = inv_tensor.reshape(tensor.shape)
-
-    return inv_tensor
+        reshaped_tensor = tensor.reshape(4, 4, -1)
+        inv_tensor = np.zeros_like(reshaped_tensor)
+        for idx in range(reshaped_tensor.shape[2]):
+            sub_tensor = reshaped_tensor[:, :, idx]
+            try:
+                inv_tensor[:, :, idx] = np.linalg.inv(sub_tensor)
+            except np.linalg.LinAlgError:
+                inv_tensor[:, :, idx] = np.eye(4)
+        inv_tensor = inv_tensor.reshape(tensor.shape)
+        return inv_tensor
 
 
 def takeFiniteDifference1(tensor, axis, delta):

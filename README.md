@@ -44,6 +44,18 @@ energy = get_energy_tensor(metric, diffOrder='fourth')
 print("Energy Tensor:", energy)
 ```
 
+## Building the Rust extension
+
+The `c4_inv` routine is implemented in Rust for improved performance. After
+installing the Python dependencies run:
+
+```bash
+pip install maturin
+maturin develop
+```
+
+This compiles the `warp_core` crate and makes it available to Python.
+
 # pywarp
 
 
