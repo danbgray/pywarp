@@ -3,7 +3,17 @@ from datetime import date
 from numba import njit
 
 try:
-    from warp_core import c4_inv as c4Inv
+    from warp_core import (
+        c4_inv as c4Inv,
+        take_finite_difference1 as _rust_fd1,
+        take_finite_difference2 as _rust_fd2,
+    )
+
+    def takeFiniteDifference1(tensor, axis, delta):
+        return _rust_fd1(tensor, axis, delta)
+
+    def takeFiniteDifference2(tensor, axis1, axis2, delta):
+        return _rust_fd2(tensor, axis1, axis2, delta)
 except Exception:  # fallback to python implementation
     def c4Inv(tensor):
         """Fallback Python implementation of blockwise 4x4 matrix inversion."""
@@ -22,9 +32,9 @@ except Exception:  # fallback to python implementation
         return inv_tensor
 
 
-def takeFiniteDifference1(tensor, axis, delta):
-    """
-    Computes the finite difference (gradient) of a tensor along a specified axis.
+    def takeFiniteDifference1(tensor, axis, delta):
+        """
+        Computes the finite difference (gradient) of a tensor along a specified axis.
 
     Args:
     - tensor (np.ndarray): The input tensor on which to compute the finite difference.
@@ -34,11 +44,11 @@ def takeFiniteDifference1(tensor, axis, delta):
     Returns:
     - np.ndarray: The tensor of finite differences (gradients) along the specified axis.
     """
-    return np.gradient(tensor, delta[axis], axis=axis)
+        return np.gradient(tensor, delta[axis], axis=axis)
 
-def takeFiniteDifference2(tensor, axis1, axis2, delta):
-    """
-    Computes the second-order finite difference (second derivative) of a tensor along two specified axes.
+    def takeFiniteDifference2(tensor, axis1, axis2, delta):
+        """
+        Computes the second-order finite difference (second derivative) of a tensor along two specified axes.
 
     Args:
     - tensor (np.ndarray): The input tensor on which to compute the second-order finite difference.
@@ -49,10 +59,10 @@ def takeFiniteDifference2(tensor, axis1, axis2, delta):
     Returns:
     - np.ndarray: The tensor of second-order finite differences (second derivatives) along the specified axes.
     """
-    if axis1 == axis2:
-        return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
-    else:
-        return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
+        if axis1 == axis2:
+            return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
+        else:
+            return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
 
 @njit
 def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
