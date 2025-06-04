@@ -3,7 +3,11 @@ from datetime import date
 from numba import njit
 
 try:
-    from warp_core import c4_inv as c4Inv
+    from warp_core import c4_inv as c4Inv, ricci_t_loops as _ricciT_loops_rust
+
+    def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
+        """Call the Rust implementation of the Ricci tensor loops."""
+        return _ricciT_loops_rust(diff1_flat, diff2_flat, inv_flat)
 except Exception:  # fallback to python implementation
     def c4Inv(tensor):
         """Fallback Python implementation of blockwise 4x4 matrix inversion."""
@@ -54,42 +58,42 @@ def takeFiniteDifference2(tensor, axis1, axis2, delta):
     else:
         return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
 
-@njit
-def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
-    """Numba-accelerated loops for Ricci tensor calculation."""
-    ricci_flat = np.zeros((4, 4, diff1_flat.shape[-1]))
-    for i in range(4):
-        for j in range(i, 4):
-            for idx in range(diff1_flat.shape[-1]):
-                temp = 0.0
-                for a in range(4):
-                    for b in range(4):
-                        temp -= 0.5 * (
-                            diff2_flat[i, j, a, b, idx]
-                            + diff2_flat[a, b, i, j, idx]
-                            - diff2_flat[i, b, j, a, idx]
-                            - diff2_flat[j, b, i, a, idx]
-                        ) * inv_flat[a, b, idx]
-                for a in range(4):
-                    for b in range(4):
-                        for c in range(4):
-                            for d in range(4):
-                                temp += 0.5 * (
-                                    0.5 * diff1_flat[a, c, i, idx] * diff1_flat[b, d, j, idx]
-                                    + diff1_flat[i, c, a, idx] * diff1_flat[j, d, b, idx]
-                                    - diff1_flat[i, c, a, idx] * diff1_flat[j, b, d, idx]
-                                ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
-                                temp -= 0.25 * (
-                                    diff1_flat[j, c, i, idx]
-                                    + diff1_flat[i, c, j, idx]
-                                    - diff1_flat[i, j, c, idx]
-                                ) * (
-                                    2 * diff1_flat[b, d, a, idx] - diff1_flat[a, b, d, idx]
-                                ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
-                ricci_flat[i, j, idx] = temp
-                if i != j:
-                    ricci_flat[j, i, idx] = temp
-    return ricci_flat
+    @njit
+    def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
+        """Numba-accelerated loops for Ricci tensor calculation."""
+        ricci_flat = np.zeros((4, 4, diff1_flat.shape[-1]))
+        for i in range(4):
+            for j in range(i, 4):
+                for idx in range(diff1_flat.shape[-1]):
+                    temp = 0.0
+                    for a in range(4):
+                        for b in range(4):
+                            temp -= 0.5 * (
+                                diff2_flat[i, j, a, b, idx]
+                                + diff2_flat[a, b, i, j, idx]
+                                - diff2_flat[i, b, j, a, idx]
+                                - diff2_flat[j, b, i, a, idx]
+                            ) * inv_flat[a, b, idx]
+                    for a in range(4):
+                        for b in range(4):
+                            for c in range(4):
+                                for d in range(4):
+                                    temp += 0.5 * (
+                                        0.5 * diff1_flat[a, c, i, idx] * diff1_flat[b, d, j, idx]
+                                        + diff1_flat[i, c, a, idx] * diff1_flat[j, d, b, idx]
+                                        - diff1_flat[i, c, a, idx] * diff1_flat[j, b, d, idx]
+                                    ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
+                                    temp -= 0.25 * (
+                                        diff1_flat[j, c, i, idx]
+                                        + diff1_flat[i, c, j, idx]
+                                        - diff1_flat[i, j, c, idx]
+                                    ) * (
+                                        2 * diff1_flat[b, d, a, idx] - diff1_flat[a, b, d, idx]
+                                    ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
+                    ricci_flat[i, j, idx] = temp
+                    if i != j:
+                        ricci_flat[j, i, idx] = temp
+        return ricci_flat
 
 def ricciT(inv_metric, metric, delta):
     """
