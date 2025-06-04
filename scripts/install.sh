@@ -17,5 +17,4 @@ cat <<MSG
 Environment is ready. Activate it with:
   pipenv shell
 MSG
-EOF
 
