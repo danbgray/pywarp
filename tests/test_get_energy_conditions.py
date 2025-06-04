@@ -3,6 +3,8 @@ import pytest
 from warp.analyzer.get_energy_conditions import get_energy_conditions
 from warp.analyzer.utils import generate_uniform_field, get_even_points_on_sphere, get_inner_product, get_trace
 
+np.random.seed(0)
+
 @pytest.fixture
 def setup_tensors():
     metric = {

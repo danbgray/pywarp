@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from warp.analyzer.change_tensor_index import change_tensor_index
 
+np.random.seed(0)
+
 @pytest.fixture
 def setup_tensors():
     input_tensor = {

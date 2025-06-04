@@ -4,6 +4,8 @@ from warp.analyzer.eval_metric import eval_metric
 from warp.metrics.get_minkowski import metric_get_minkowski
 from warp.solver.get_energy_tensor import get_energy_tensor
 
+np.random.seed(0)
+
 @pytest.fixture
 def setup_metric():
     return metric_get_minkowski((2, 2, 2, 2))
