@@ -38,6 +38,11 @@ def metric_get_alcubierre(gridSize, worldCenter, v, R, sigma, gridScale=(1, 1, 1
 
     return metric
 
+
+def metricGet_Alcubierre(*args, **kwargs):
+    """Backward compatible wrapper for :func:`metric_get_alcubierre`."""
+    return metric_get_alcubierre(*args, **kwargs)
+
 def metric_get_alcubierre_comoving(gridSize, worldCenter, v, R, sigma, gridScale=(1, 1, 1, 1)):
     if gridSize[0] > 1:
         raise ValueError('The time grid is greater than 1, only a size of 1 can be used in comoving')
@@ -74,6 +79,11 @@ def metric_get_alcubierre_comoving(gridSize, worldCenter, v, R, sigma, gridScale
     metric["tensor"] = threePlusOneBuilder(alpha, beta, gamma)
 
     return metric
+
+
+def metricGet_AlcubierreComoving(*args, **kwargs):
+    """Backward compatible wrapper for :func:`metric_get_alcubierre_comoving`."""
+    return metric_get_alcubierre_comoving(*args, **kwargs)
 
 # Define the speed of light constant (in whatever units you're using)
 c = 1  # You may need to adjust this value based on your unit system
