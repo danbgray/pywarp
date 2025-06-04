@@ -1,6 +1,6 @@
 import numpy as np
-from warp.solver.get_energy_tensor import get_energy_tensor
 from datetime import date
+from warp.core import energy_tensor
 
 def test_get_energy_tensor():
     """
@@ -41,7 +41,7 @@ def test_get_energy_tensor():
         'name': "Minkowski"
     }
 
-    energy = get_energy_tensor(metric, diffOrder='fourth')
+    energy = energy_tensor(metric, diff_order='fourth')
 
     # Assertions to validate the results
     assert energy['type'] == "Stress-Energy"
