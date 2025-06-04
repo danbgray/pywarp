@@ -1,6 +1,10 @@
 import numpy as np
 from datetime import date
 from numba import njit
+try:
+    from ricci_core import ricci_t_loops as rust_ricci_t_loops
+except ImportError:  # pragma: no cover - Rust extension optional
+    rust_ricci_t_loops = None
 
 def c4Inv(tensor):
     """
@@ -127,7 +131,10 @@ def ricciT(inv_metric, metric, delta):
     diff2_flat = diff_2_gl.reshape(4, 4, 4, 4, -1)
     inv_flat = inv_metric.reshape(4, 4, -1)
 
-    ricci_flat = _ricciT_loops(diff1_flat, diff2_flat, inv_flat)
+    if rust_ricci_t_loops is not None:
+        ricci_flat = rust_ricci_t_loops(diff1_flat, diff2_flat, inv_flat)
+    else:
+        ricci_flat = _ricciT_loops(diff1_flat, diff2_flat, inv_flat)
 
     return ricci_flat.reshape(4, 4, *s)
 
