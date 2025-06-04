@@ -2,13 +2,16 @@ import numpy as np
 from datetime import date
 from numba import njit
 try:
-    from ricci_core import ricci_t_loops as rust_ricci_t_loops
-except ImportError:  # pragma: no cover - Rust extension optional
+    from warp_core import (
+        c4_inv as c4Inv,
+        take_finite_difference1 as rust_take_finite_difference1,
+        take_finite_difference2 as rust_take_finite_difference2,
+        _ricci_t_loops as rust_ricci_t_loops,
+    )
+except Exception:  # pragma: no cover - Rust extension optional
+    rust_take_finite_difference1 = None
+    rust_take_finite_difference2 = None
     rust_ricci_t_loops = None
-
-try:
-    from warp_core import c4_inv as c4Inv
-except Exception:  # fallback to python implementation
     def c4Inv(tensor):
         """Fallback Python implementation of blockwise 4x4 matrix inversion."""
         if tensor.shape[0] != 4 or tensor.shape[1] != 4:
@@ -38,6 +41,8 @@ def takeFiniteDifference1(tensor, axis, delta):
     Returns:
     - np.ndarray: The tensor of finite differences (gradients) along the specified axis.
     """
+    if rust_take_finite_difference1 is not None:
+        return rust_take_finite_difference1(tensor, axis, delta)
     return np.gradient(tensor, delta[axis], axis=axis)
 
 def takeFiniteDifference2(tensor, axis1, axis2, delta):
@@ -53,6 +58,8 @@ def takeFiniteDifference2(tensor, axis1, axis2, delta):
     Returns:
     - np.ndarray: The tensor of second-order finite differences (second derivatives) along the specified axes.
     """
+    if rust_take_finite_difference2 is not None:
+        return rust_take_finite_difference2(tensor, axis1, axis2, delta)
     if axis1 == axis2:
         return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
     else:

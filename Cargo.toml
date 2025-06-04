@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "rust/warp_core",
+    "warp/solver/rust/ricci_core"
+]
+resolver = "2"

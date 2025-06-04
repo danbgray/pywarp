@@ -1,0 +1,26 @@
+[build-system]
+requires = ["maturin>=1.4"]
+build-backend = "maturin"
+
+[project]
+name = "pywarp"
+version = "0.1.0"
+description = "Warp drive spacetime tools with Rust extensions"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name = "PyWarp Developers"}]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+
+[project.dependencies]
+numpy = "*"
+scipy = "*"
+numba = "*"
+
+[tool.maturin]
+manifest-path = "rust/warp_core/Cargo.toml"
+module-name = "warp_core"
+python-source = "."
