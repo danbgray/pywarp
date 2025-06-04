@@ -44,7 +44,6 @@ energy = get_energy_tensor(metric, diffOrder='fourth')
 print("Energy Tensor:", energy)
 ```
 
-## Notebooks
 
 Example notebooks are located in the `notebooks/` directory. Start Jupyter and open
 `intro.ipynb` to see a full workflow that builds a metric, computes its energy tensor
@@ -54,10 +53,14 @@ and visualizes the result using Plotly.
 jupyter notebook notebooks/intro.ipynb
 ```
 
-# pywarp
+## Building the Rust extension
 
+The `c4_inv` routine is implemented in Rust for improved performance. After
+installing the Python dependencies run:
 
-Using numpy and matrix operations where possible to keep it fast.
-starting in primarly python but going to make use of rust or bend where speed is needed.
+```bash
+pip install maturin
+maturin develop
+```
 
-Goal is to get jupyter notebooks able to explore things
+This compiles the `warp_core` crate and makes it available to Python.

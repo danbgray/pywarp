@@ -52,6 +52,3 @@ def test_get_energy_tensor():
     assert energy['name'] == metric['name']
     assert isinstance(energy['date'], date)
 
-    print("Energy Tensor:", energy)
-
-test_get_energy_tensor()

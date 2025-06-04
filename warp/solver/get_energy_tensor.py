@@ -1,40 +1,25 @@
 import numpy as np
 from datetime import date
+from numba import njit
 
-def c4Inv(tensor):
-    """
-    Computes the inverse of each 4x4 sub-tensor within an n-dimensional tensor.
+try:
+    from warp_core import c4_inv as c4Inv
+except Exception:  # fallback to python implementation
+    def c4Inv(tensor):
+        """Fallback Python implementation of blockwise 4x4 matrix inversion."""
+        if tensor.shape[0] != 4 or tensor.shape[1] != 4:
+            raise ValueError("The first two dimensions of the input tensor must be of size 4.")
 
-    Args:
-    - tensor (np.ndarray): An n-dimensional tensor where the first two dimensions are 4x4 matrices.
-
-    Returns:
-    - inv_tensor (np.ndarray): An n-dimensional tensor of the same shape as the input,
-      where each 4x4 sub-tensor has been inverted. If a sub-tensor is singular and cannot
-      be inverted, it is replaced by the 4x4 identity matrix.
-    """
-    # Ensure the tensor has at least 2 dimensions of size 4 for inversion
-    if tensor.shape[0] != 4 or tensor.shape[1] != 4:
-        raise ValueError("The first two dimensions of the input tensor must be of size 4.")
-
-    # Flatten the remaining dimensions into one dimension
-    reshaped_tensor = tensor.reshape(4, 4, -1)
-
-    # Initialize an array to store the inverted sub-tensors
-    inv_tensor = np.zeros_like(reshaped_tensor)
-
-    # Loop through the flattened dimension and invert each sub-tensor
-    for idx in range(reshaped_tensor.shape[2]):
-        sub_tensor = reshaped_tensor[:, :, idx]
-        try:
-            inv_tensor[:, :, idx] = np.linalg.inv(sub_tensor)
-        except np.linalg.LinAlgError:
-            inv_tensor[:, :, idx] = np.eye(4)
-
-    # Reshape the inverted tensor back to its original shape
-    inv_tensor = inv_tensor.reshape(tensor.shape)
-
-    return inv_tensor
+        reshaped_tensor = tensor.reshape(4, 4, -1)
+        inv_tensor = np.zeros_like(reshaped_tensor)
+        for idx in range(reshaped_tensor.shape[2]):
+            sub_tensor = reshaped_tensor[:, :, idx]
+            try:
+                inv_tensor[:, :, idx] = np.linalg.inv(sub_tensor)
+            except np.linalg.LinAlgError:
+                inv_tensor[:, :, idx] = np.eye(4)
+        inv_tensor = inv_tensor.reshape(tensor.shape)
+        return inv_tensor
 
 
 def takeFiniteDifference1(tensor, axis, delta):
@@ -69,6 +54,43 @@ def takeFiniteDifference2(tensor, axis1, axis2, delta):
     else:
         return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
 
+@njit
+def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
+    """Numba-accelerated loops for Ricci tensor calculation."""
+    ricci_flat = np.zeros((4, 4, diff1_flat.shape[-1]))
+    for i in range(4):
+        for j in range(i, 4):
+            for idx in range(diff1_flat.shape[-1]):
+                temp = 0.0
+                for a in range(4):
+                    for b in range(4):
+                        temp -= 0.5 * (
+                            diff2_flat[i, j, a, b, idx]
+                            + diff2_flat[a, b, i, j, idx]
+                            - diff2_flat[i, b, j, a, idx]
+                            - diff2_flat[j, b, i, a, idx]
+                        ) * inv_flat[a, b, idx]
+                for a in range(4):
+                    for b in range(4):
+                        for c in range(4):
+                            for d in range(4):
+                                temp += 0.5 * (
+                                    0.5 * diff1_flat[a, c, i, idx] * diff1_flat[b, d, j, idx]
+                                    + diff1_flat[i, c, a, idx] * diff1_flat[j, d, b, idx]
+                                    - diff1_flat[i, c, a, idx] * diff1_flat[j, b, d, idx]
+                                ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
+                                temp -= 0.25 * (
+                                    diff1_flat[j, c, i, idx]
+                                    + diff1_flat[i, c, j, idx]
+                                    - diff1_flat[i, j, c, idx]
+                                ) * (
+                                    2 * diff1_flat[b, d, a, idx] - diff1_flat[a, b, d, idx]
+                                ) * inv_flat[a, b, idx] * inv_flat[c, d, idx]
+                ricci_flat[i, j, idx] = temp
+                if i != j:
+                    ricci_flat[j, i, idx] = temp
+    return ricci_flat
+
 def ricciT(inv_metric, metric, delta):
     """
     Computes the Ricci tensor from the given metric tensor and its inverse.
@@ -85,25 +107,13 @@ def ricciT(inv_metric, metric, delta):
     diff_1_gl = np.array([[takeFiniteDifference1(metric[i, j], k, delta) for k in range(4)] for i in range(4) for j in range(4)]).reshape(4, 4, 4, *s)
     diff_2_gl = np.array([[[takeFiniteDifference2(metric[i, j], k, n, delta) for n in range(4)] for k in range(4)] for i in range(4) for j in range(4)]).reshape(4, 4, 4, 4, *s)
 
-    ricci_tensor = np.zeros((4, 4, *s))
+    diff1_flat = diff_1_gl.reshape(4, 4, 4, -1)
+    diff2_flat = diff_2_gl.reshape(4, 4, 4, 4, -1)
+    inv_flat = inv_metric.reshape(4, 4, -1)
 
-    for i in range(4):
-        for j in range(i, 4):
-            R_munu_temp = np.zeros(s)
-            for a in range(4):
-                for b in range(4):
-                    R_munu_temp -= 0.5 * (diff_2_gl[i, j, a, b] + diff_2_gl[a, b, i, j] - diff_2_gl[i, b, j, a] - diff_2_gl[j, b, i, a]) * inv_metric[a, b]
-            for a in range(4):
-                for b in range(4):
-                    for c in range(4):
-                        for d in range(4):
-                            R_munu_temp += 0.5 * (0.5 * diff_1_gl[a, c, i] * diff_1_gl[b, d, j] + diff_1_gl[i, c, a] * diff_1_gl[j, d, b] - diff_1_gl[i, c, a] * diff_1_gl[j, b, d]) * inv_metric[a, b] * inv_metric[c, d]
-                            R_munu_temp -= 0.25 * (diff_1_gl[j, c, i] + diff_1_gl[i, c, j] - diff_1_gl[i, j, c]) * (2 * diff_1_gl[b, d, a] - diff_1_gl[a, b, d]) * inv_metric[a, b] * inv_metric[c, d]
-            ricci_tensor[i, j] = R_munu_temp
-            if i != j:
-                ricci_tensor[j, i] = R_munu_temp
+    ricci_flat = _ricciT_loops(diff1_flat, diff2_flat, inv_flat)
 
-    return ricci_tensor
+    return ricci_flat.reshape(4, 4, *s)
 
 def ricciS(ricci_tensor, inv_metric):
     """
