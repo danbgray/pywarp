@@ -6,7 +6,15 @@ PyWarp is a Python package for calculating the energy tensor from a given metric
 
 ## Installation
 
-To install PyWarp, you can clone the repository and install the required dependencies:
+PyWarp uses a Rust extension built with [maturin](https://github.com/PyO3/maturin).
+The extension is compiled automatically when installing the package via `pip`:
+
+```bash
+pip install .
+```
+
+For development you can still use the helper script which installs the Python
+dependencies using `pipenv`:
 
 ```bash
 git clone https://github.com/yourusername/pywarp.git
@@ -62,12 +70,14 @@ jupyter notebook notebooks/intro.ipynb
 
 ## Building the Rust extension
 
-The `c4_inv` routine is implemented in Rust for improved performance. After
-installing the Python dependencies run:
+The `c4_inv` routine is implemented in Rust for improved performance. When the
+package is installed with `pip` the extension is compiled automatically via the
+`pyproject.toml` configuration. If you need to rebuild the extension while
+developing, run:
 
 ```bash
-pip install maturin
 maturin develop
 ```
 
-This compiles the `warp_core` crate and makes it available to Python.
+This command compiles the `warp_core` crate and installs it into the current
+environment.
