@@ -2,7 +2,7 @@ import numpy as np
 from datetime import date
 from .utils import setMinkowskiThreePlusOne, shapeFunction_Alcubierre, threePlusOneBuilder
 
-def metricGet_Alcubierre(gridSize, worldCenter, v, R, sigma, gridScale=[1, 1, 1, 1]):
+def metric_get_alcubierre(gridSize, worldCenter, v, R, sigma, gridScale=(1, 1, 1, 1)):
     metric = {
         "params": {
             "gridSize": gridSize,
@@ -38,7 +38,7 @@ def metricGet_Alcubierre(gridSize, worldCenter, v, R, sigma, gridScale=[1, 1, 1,
 
     return metric
 
-def metricGet_AlcubierreComoving(gridSize, worldCenter, v, R, sigma, gridScale=[1, 1, 1, 1]):
+def metric_get_alcubierre_comoving(gridSize, worldCenter, v, R, sigma, gridScale=(1, 1, 1, 1)):
     if gridSize[0] > 1:
         raise ValueError('The time grid is greater than 1, only a size of 1 can be used in comoving')
 
