@@ -64,3 +64,13 @@ maturin develop
 ```
 
 This compiles the `warp_core` crate and makes it available to Python.
+
+## Testing
+
+The test suite uses `pytest`. Make sure the project dependencies are installed
+before running the tests:
+
+```bash
+pip install -r requirements.txt
+pytest
+```
