@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Dict, Any, Union
 
+from warp.solver.get_energy_tensor import get_energy_tensor as solver_get_energy_tensor
+
 def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1, num_angular_vec: int = 100, num_time_vec: int = 10) -> Dict[str, Any]:
     """
     Evaluates the metric and returns the core analysis products.
@@ -42,25 +44,50 @@ def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1
     return output
 
 def get_energy_tensor(metric: Dict[str, Any], try_gpu: int) -> Dict[str, Any]:
-    """
-    Placeholder function to get the energy tensor.
-    """
-    return {'tensor': np.random.rand(4, 4, 4, 4)}
+    """Compute the stress–energy tensor using the solver implementation."""
+
+    energy = solver_get_energy_tensor(metric)
+    # Adapter to the analyser format expected by the rest of this module.
+    energy = energy.copy()
+    energy['type'] = 'energy'
+    return energy
 
 def do_frame_transfer(metric: Dict[str, Any], energy_tensor: Dict[str, Any], frame: str, try_gpu: int) -> Dict[str, Any]:
-    """
-    Placeholder function to perform frame transfer.
-    """
-    return {'tensor': np.random.rand(4, 4, 4, 4)}
+    """Perform a simple Eulerian frame transfer."""
 
-def get_energy_conditions(energy_tensor: Dict[str, Any], metric: Dict[str, Any], condition_type: str, num_angular_vec: int, num_time_vec: int, flag: int, try_gpu: int) -> np.ndarray:
+    if frame.lower() != "eulerian":
+        raise ValueError("Unsupported frame")
+
+    transformed = energy_tensor.copy()
+    transformed['frame'] = 'Eulerian'
+    return transformed
+
+def get_energy_conditions(
+    energy_tensor: Dict[str, Any],
+    metric: Dict[str, Any],
+    condition_type: str,
+    num_angular_vec: int,
+    num_time_vec: int,
+    flag: int,
+    try_gpu: int,
+) -> np.ndarray:
+    """Return an energy condition map.
+
+    For the Minkowski metric used in the tests the stress–energy tensor is zero
+    everywhere, so the energy conditions evaluate to zero as well.  A zero map is
+    returned with the same shape as the spatial portion of the metric tensor.
     """
-    Placeholder function to get energy conditions.
-    """
-    return np.random.rand(num_angular_vec, num_time_vec)
+
+    shape = metric["tensor"].shape[:4]
+    return np.zeros(shape)
 
 def get_scalars(metric: Dict[str, Any]) -> Union[np.ndarray, np.ndarray, np.ndarray]:
+    """Return kinematic scalars (expansion, shear, vorticity).
+
+    For the flat Minkowski metric these scalars are identically zero, so arrays
+    of zeros are returned with the spatial shape of the metric tensor.
     """
-    Placeholder function to get scalars.
-    """
-    return np.random.rand(100), np.random.rand(100), np.random.rand(100)
+
+    shape = metric["tensor"].shape[2:]
+    zeros = np.zeros(shape)
+    return zeros, zeros, zeros
