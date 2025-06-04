@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from warp.analyzer.do_frame_transfer import do_frame_transfer
 
+np.random.seed(0)
+
 @pytest.fixture
 def setup_tensors():
     metric = {

@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from warp.analyzer.eval_metric import eval_metric
 
+np.random.seed(0)
+
 @pytest.fixture
 def setup_metric():
     metric = {
