@@ -44,6 +44,12 @@ energy = get_energy_tensor(metric, diffOrder='fourth')
 print("Energy Tensor:", energy)
 ```
 
+For sweeps over multiple metrics you can use `run_parameter_sweep` from the `warp.pipeline` module.
+```python
+from warp.pipeline import run_parameter_sweep
+outputs = run_parameter_sweep([metric])
+```
+
 
 Example notebooks are located in the `notebooks/` directory. Start Jupyter and open
 `intro.ipynb` to see a full workflow that builds a metric, computes its energy tensor
