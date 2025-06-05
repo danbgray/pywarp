@@ -1,18 +1,12 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+import warnings
 
-def get_momentum_flow_lines(
-    energy_tensor,
-    start_points,
-    step_size,
-    max_steps,
-    scale_factor,
-    *,
-    momentum_threshold=1e-8,
-    adaptive=False,
-):
-    """Compute momentum flow lines for an energy tensor.
 
+
+def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, scale_factor):
+    """
+    Gets the momentum flow lines for an energy tensor.
     Parameters:
     energy_tensor (np.ndarray): Energy tensor (should be contravariant), shape (4, 4, dim_x, dim_y, dim_z).
     start_points (list): List of 3 arrays containing the start points of flowlines.
@@ -27,6 +21,7 @@ def get_momentum_flow_lines(
     Returns:
     list: List of paths, each path is an array of shape (M, 3).
     """
+    
     if energy_tensor.shape[0:2] != (4, 4):
         raise ValueError("Energy tensor must have shape (4, 4, dim_x, dim_y, dim_z).")
 
@@ -36,10 +31,20 @@ def get_momentum_flow_lines(
     Zmom = energy_tensor[0, 3] * scale_factor
 
     # Define interpolators for momentum components
-    grid_x, grid_y, grid_z = np.arange(Xmom.shape[0]), np.arange(Xmom.shape[1]), np.arange(Xmom.shape[2])
-    interpolator_x = RegularGridInterpolator((grid_x, grid_y, grid_z), Xmom, bounds_error=False, fill_value=np.nan)
-    interpolator_y = RegularGridInterpolator((grid_x, grid_y, grid_z), Ymom, bounds_error=False, fill_value=np.nan)
-    interpolator_z = RegularGridInterpolator((grid_x, grid_y, grid_z), Zmom, bounds_error=False, fill_value=np.nan)
+    grid_x, grid_y, grid_z = (
+        np.arange(Xmom.shape[0]),
+        np.arange(Xmom.shape[1]),
+        np.arange(Xmom.shape[2]),
+    )
+    interpolator_x = RegularGridInterpolator(
+        (grid_x, grid_y, grid_z), Xmom, bounds_error=False, fill_value=np.nan
+    )
+    interpolator_y = RegularGridInterpolator(
+        (grid_x, grid_y, grid_z), Ymom, bounds_error=False, fill_value=np.nan
+    )
+    interpolator_z = RegularGridInterpolator(
+        (grid_x, grid_y, grid_z), Zmom, bounds_error=False, fill_value=np.nan
+    )
 
     # Reshape the starting points
     StrPtsX = np.reshape(start_points[0], -1)
@@ -47,6 +52,7 @@ def get_momentum_flow_lines(
     StrPtsZ = np.reshape(start_points[2], -1)
 
     paths = []
+    all_single_point = True
     for x0, y0, z0 in zip(StrPtsX, StrPtsY, StrPtsZ):
         path = np.zeros((max_steps, 3))
         path[0] = [x0, y0, z0]
@@ -54,8 +60,11 @@ def get_momentum_flow_lines(
 
         for i in range(max_steps - 1):
             pos = path[i]
-            if np.any(np.isnan(pos)) or np.any(pos < 0) or np.any(
-                pos >= [Xmom.shape[0], Xmom.shape[1], Xmom.shape[2]]
+
+            if (
+                np.any(np.isnan(pos))
+                or np.any(pos < 0)
+                or np.any(pos >= [Xmom.shape[0], Xmom.shape[1], Xmom.shape[2]])
             ):
                 break
 
@@ -65,7 +74,7 @@ def get_momentum_flow_lines(
             momentum_z = float(interpolator_z(pos))
             momentum = np.array([momentum_x, momentum_y, momentum_z])
 
-            if np.any(np.isnan(momentum)):
+            if np.any(np.isnan(momentum)) or np.allclose(momentum, 0):
                 break
 
             momentum_norm = np.linalg.norm(momentum)
@@ -81,9 +90,19 @@ def get_momentum_flow_lines(
             path[i + 1] = pos + step_vec
             step_count += 1
 
+        if step_count > 1:
+            all_single_point = False
         paths.append(path[:step_count])
 
+    if all_single_point:
+        warnings.warn(
+            "All momentum flow lines terminated after a single step. "
+            "The energy tensor may contain zero or invalid momentum values.",
+            RuntimeWarning,
+        )
+
     return paths
+
 
 # Example usage:
 if __name__ == "__main__":
@@ -97,5 +116,7 @@ if __name__ == "__main__":
     max_steps = 100
     scale_factor = 1.0
 
-    paths = get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, scale_factor)
+    paths = get_momentum_flow_lines(
+        energy_tensor, start_points, step_size, max_steps, scale_factor
+    )
     print(paths)

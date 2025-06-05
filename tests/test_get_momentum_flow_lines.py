@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from warp.analyzer.get_momentum_flow_lines import get_momentum_flow_lines
 
+
 def test_get_momentum_flow_lines():
     # Dummy data for testing
     energy_tensor = np.zeros((4, 4, 10, 10, 10))
@@ -13,7 +14,9 @@ def test_get_momentum_flow_lines():
     max_steps = 100
     scale_factor = 1.0
 
-    paths = get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, scale_factor)
+    paths = get_momentum_flow_lines(
+        energy_tensor, start_points, step_size, max_steps, scale_factor
+    )
     assert len(paths) == 3
 
     expected_lengths = [82, 72, 62]
@@ -21,6 +24,12 @@ def test_get_momentum_flow_lines():
         assert path.shape[0] == expected_length
         assert not np.isnan(path).any()
 
+def test_zero_momentum_warning():
+    energy_tensor = np.zeros((4, 4, 5, 5, 5))
+    start_points = [np.array([0]), np.array([0]), np.array([0])]
+    with pytest.warns(RuntimeWarning):
+        paths = get_momentum_flow_lines(energy_tensor, start_points, 0.1, 10, 1.0)
+    assert paths[0].shape[0] == 1
 
 def test_momentum_threshold_stops_integration():
     energy_tensor = np.zeros((4, 4, 4, 4, 4))
@@ -56,3 +65,4 @@ def test_adaptive_step_normalises_length():
     )
     delta = paths[0][1] - paths[0][0]
     assert np.isclose(np.linalg.norm(delta), step_size)
+
