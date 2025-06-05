@@ -148,22 +148,61 @@ def change_tensor_index(tensor: Dict[str, Any], index: str, metric: Dict[str, An
 
     return {'type': tensor['type'], 'index': index, 'tensor': new_tensor}
 
-def cov_div(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, u_up_cell: np.ndarray, u_down_cell: np.ndarray, i: int, j: int, coords: list, epsilon: float) -> np.ndarray:
-    """
-    Calculate the covariant derivative of the tensor.
+def cov_div(
+    metric_tensor: np.ndarray,
+    inv_metric_tensor: np.ndarray,
+    u_up_cell: np.ndarray,
+    u_down_cell: np.ndarray,
+    i: int,
+    j: int,
+    coords: list,
+    epsilon: float,
+) -> np.ndarray:
+    """Return ``∇_i u_j`` for the supplied tensor components.
 
-    Args:
-        metric_tensor (np.ndarray): Metric tensor.
-        inv_metric_tensor (np.ndarray): Inverse of the metric tensor.
-        u_up_cell (np.ndarray): Upper indices of the tensor.
-        u_down_cell (np.ndarray): Lower indices of the tensor.
-        i (int): Index i.
-        j (int): Index j.
-        coords (list): Coordinates.
-        epsilon (float): Small epsilon value.
+    Parameters
+    ----------
+    metric_tensor : np.ndarray
+        Metric tensor with covariant indices of shape ``(4, 4, ...)``.
+    inv_metric_tensor : np.ndarray
+        Inverse metric tensor with contravariant indices of shape ``(4, 4, ...)``.
+    u_up_cell : sequence of np.ndarray
+        Contravariant components ``u^k`` evaluated on the grid.
+    u_down_cell : sequence of np.ndarray
+        Covariant components ``u_k`` evaluated on the grid.
+    i : int
+        Derivative index.
+    j : int
+        Component index being differentiated.
+    coords : list
+        Grid spacing for each coordinate direction.
+    epsilon : float
+        Unused small parameter kept for backwards compatibility.
 
-    Returns:
-        np.ndarray: Covariant derivative of the tensor.
+    Returns
+    -------
+    np.ndarray
+        The covariant derivative ``∇_i u_j`` evaluated on the grid.
     """
-    # Placeholder implementation, the actual implementation might be different.
-    return np.einsum('...k,...k->...', u_up_cell[i], u_down_cell[j])
+
+    # Gradient of the j-th covariant component along axis ``i``
+    du = np.gradient(u_down_cell[j], coords[i], axis=i)
+
+    # Compute Christoffel symbols Γ^k_{j i}
+    s = metric_tensor.shape[2:]
+    gamma = np.zeros((4,) + s)
+    for k in range(4):
+        acc = 0
+        for l in range(4):
+            dg_lj_i = np.gradient(metric_tensor[l, j], coords[i], axis=i)
+            dg_il_j = np.gradient(metric_tensor[i, l], coords[j], axis=j)
+            dg_ij_l = np.gradient(metric_tensor[i, j], coords[l], axis=l)
+            acc += 0.5 * inv_metric_tensor[k, l] * (
+                dg_lj_i + dg_il_j - dg_ij_l
+            )
+        gamma[k] = acc
+
+    # Contract Γ^k_{j i} u_k
+    connection_term = sum(gamma[k] * u_down_cell[k] for k in range(4))
+
+    return du - connection_term
