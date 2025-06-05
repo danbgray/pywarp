@@ -86,6 +86,9 @@ launch the notebook with:
 jupyter notebook notebooks/intro.ipynb
 ```
 
+For a full manual that mirrors the structure of the WarpFactory GitBook see
+`docs/guide/index.md`.
+
 ## Building the Rust extension
 
 The `c4_inv` routine is implemented in Rust for improved performance. Installing
