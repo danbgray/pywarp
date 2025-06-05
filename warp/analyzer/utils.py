@@ -38,9 +38,24 @@ def get_eulerian_transformation_matrix(metric_tensor: np.ndarray, coords: Any) -
     Returns:
         np.ndarray: Eulerian transformation matrix.
     """
-    # Implement the Eulerian transformation matrix logic here
-    # Placeholder implementation for example
-    return np.eye(4)
+    if coords != "cartesian":
+        raise ValueError("Only Cartesian coordinates are supported")
+
+    if metric_tensor.shape[0] != 4 or metric_tensor.shape[1] != 4:
+        raise ValueError("metric_tensor must be a 4x4 tensor")
+
+    # Diagonal components of the metric are used to normalise the tetrad
+    diag = np.diagonal(metric_tensor, axis1=0, axis2=1)
+
+    m_shape = (4, 4) + metric_tensor.shape[2:]
+    transform = np.zeros(m_shape, dtype=metric_tensor.dtype)
+
+    transform[0, 0] = 1.0 / np.sqrt(-diag[0])
+    transform[1, 1] = 1.0 / np.sqrt(diag[1])
+    transform[2, 2] = 1.0 / np.sqrt(diag[2])
+    transform[3, 3] = 1.0 / np.sqrt(diag[3])
+
+    return transform
 
 def get_even_points_on_sphere(num_points: int) -> np.ndarray:
     """
