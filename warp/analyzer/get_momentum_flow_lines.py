@@ -4,7 +4,16 @@ import warnings
 
 
 
-def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, scale_factor):
+def get_momentum_flow_lines(
+    energy_tensor,
+    start_points,
+    step_size,
+    max_steps,
+    scale_factor,
+    *,
+    momentum_threshold=1e-8,
+    adaptive=False,
+):
     """
     Gets the momentum flow lines for an energy tensor.
     Parameters:
