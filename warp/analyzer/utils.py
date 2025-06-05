@@ -181,32 +181,61 @@ def _christoffel_symbols(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarra
                 Gamma[a, b, c] = 0.5 * term
     return Gamma
 
-def cov_div(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, u_down: np.ndarray, i: int, j: int, coords: list) -> np.ndarray:
-    """Covariant derivative ``∇_j u_i`` for a covariant vector ``u``.
+def cov_div(
+    metric_tensor: np.ndarray,
+    inv_metric_tensor: np.ndarray,
+    u_up_cell: np.ndarray,
+    u_down_cell: np.ndarray,
+    i: int,
+    j: int,
+    coords: list,
+    epsilon: float,
+) -> np.ndarray:
+    """Return ``∇_i u_j`` for the supplied tensor components.>>>>>>> main
 
     Parameters
     ----------
     metric_tensor : np.ndarray
-        Metric tensor ``g_{ab}``.
+        Metric tensor with covariant indices of shape ``(4, 4, ...)``.
     inv_metric_tensor : np.ndarray
-        Inverse metric ``g^{ab}``.
-    u_down : np.ndarray
-        Covariant components of the vector ``u`` with shape ``(4, ...)``.
-    i, j : int
-        Indices of the derivative.
+        Inverse metric tensor with contravariant indices of shape ``(4, 4, ...)``.
+    u_up_cell : sequence of np.ndarray
+        Contravariant components ``u^k`` evaluated on the grid.
+    u_down_cell : sequence of np.ndarray
+        Covariant components ``u_k`` evaluated on the grid.
+    i : int
+        Derivative index.
+    j : int
+        Component index being differentiated.
     coords : list
-        Coordinate spacings.
+        Grid spacing for each coordinate direction.
+    epsilon : float
+        Unused small parameter kept for backwards compatibility.
+
+    Returns
+    -------
+    np.ndarray
+        The covariant derivative ``∇_i u_j`` evaluated on the grid.
     """
 
-    axis = 1 + j
-    if u_down.shape[axis] > 1:
-        partial = np.gradient(u_down[i], coords[j], axis=axis)
-    else:
-        partial = np.zeros_like(u_down[i])
+    # Gradient of the j-th covariant component along axis ``i``
+    du = np.gradient(u_down_cell[j], coords[i], axis=i)
 
-    Gamma = _christoffel_symbols(metric_tensor, inv_metric_tensor, coords)
-
-    result = partial.copy()
+    # Compute Christoffel symbols Γ^k_{j i}
+    s = metric_tensor.shape[2:]
+    gamma = np.zeros((4,) + s)
     for k in range(4):
-        result -= Gamma[k, i, j] * u_down[k]
-    return result
+        acc = 0
+        for l in range(4):
+            dg_lj_i = np.gradient(metric_tensor[l, j], coords[i], axis=i)
+            dg_il_j = np.gradient(metric_tensor[i, l], coords[j], axis=j)
+            dg_ij_l = np.gradient(metric_tensor[i, j], coords[l], axis=l)
+            acc += 0.5 * inv_metric_tensor[k, l] * (
+                dg_lj_i + dg_il_j - dg_ij_l
+            )
+        gamma[k] = acc
+
+    # Contract Γ^k_{j i} u_k
+    connection_term = sum(gamma[k] * u_down_cell[k] for k in range(4))
+
+    return du - connection_term
