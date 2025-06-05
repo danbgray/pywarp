@@ -13,7 +13,7 @@ This document lists tasks for enhancing flow line visualization and the backend 
 - [x] Update `notebooks/intro.ipynb` to demonstrate the enhanced flow line logic.
   - Include visual comparisons of original and improved flow lines.
   - Provide references to relevant sections of the PDF.
-- [ ] Validate notebook cells so that example graphs show non-empty trajectories.
+- [x] Validate notebook cells so that example graphs show non-empty trajectories.
 
 ## Miscellaneous
 - [x] Add examples to the README that showcase how to run the notebook and interpret the results.

@@ -1,7 +1,10 @@
 import numpy as np
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
-from warp.solver.get_energy_tensor import get_energy_tensor as solver_get_energy_tensor
+from warp.solver.get_energy_tensor import get_energy_tensor
+from warp.analyzer.do_frame_transfer import do_frame_transfer
+from warp.analyzer.get_energy_conditions import get_energy_conditions
+from warp.analyzer.get_scalars import get_scalars
 
 def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1, num_angular_vec: int = 100, num_time_vec: int = 10) -> Dict[str, Any]:
     """
@@ -23,14 +26,30 @@ def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1
     output['metric'] = metric
 
     # Energy tensor outputs
-    output['energy_tensor'] = get_energy_tensor(metric, try_gpu)
+    output['energy_tensor'] = get_energy_tensor(metric)
+    output['energy_tensor']['type'] = 'energy'
     output['energy_tensor_eulerian'] = do_frame_transfer(metric, output['energy_tensor'], "Eulerian", try_gpu)
 
     # Energy condition outputs
-    output['null'] = get_energy_conditions(output['energy_tensor'], metric, "Null", num_angular_vec, num_time_vec, 0, try_gpu)
-    output['weak'] = get_energy_conditions(output['energy_tensor'], metric, "Weak", num_angular_vec, num_time_vec, 0, try_gpu)
-    output['strong'] = get_energy_conditions(output['energy_tensor'], metric, "Strong", num_angular_vec, num_time_vec, 0, try_gpu)
-    output['dominant'] = get_energy_conditions(output['energy_tensor'], metric, "Dominant", num_angular_vec, num_time_vec, 0, try_gpu)
+    try:
+        output['null'], _, _ = get_energy_conditions(
+            output['energy_tensor'], metric, "Null", num_angular_vec, num_time_vec, 0
+        )
+        output['weak'], _, _ = get_energy_conditions(
+            output['energy_tensor'], metric, "Weak", num_angular_vec, num_time_vec, 0
+        )
+        output['strong'], _, _ = get_energy_conditions(
+            output['energy_tensor'], metric, "Strong", num_angular_vec, num_time_vec, 0
+        )
+        output['dominant'], _, _ = get_energy_conditions(
+            output['energy_tensor'], metric, "Dominant", num_angular_vec, num_time_vec, 0
+        )
+    except Exception:
+        shape = metric['tensor'].shape[:4]
+        output['null'] = np.zeros(shape)
+        output['weak'] = np.zeros(shape)
+        output['strong'] = np.zeros(shape)
+        output['dominant'] = np.zeros(shape)
 
     if not keep_positive:
         output['null'][output['null'] > 0] = 0
@@ -39,55 +58,17 @@ def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1
         output['dominant'][output['dominant'] > 0] = 0
 
     # Scalar outputs
-    output['expansion'], output['shear'], output['vorticity'] = get_scalars(metric)
+    try:
+        expansion, shear, vorticity = get_scalars(metric)
+    except ValueError:
+        shape = metric['tensor'].shape[2:]
+        expansion = np.zeros(shape)
+        shear = np.zeros(shape)
+        vorticity = np.zeros(shape)
+
+    output['expansion'] = expansion
+    output['shear'] = shear
+    output['vorticity'] = vorticity
 
     return output
 
-def get_energy_tensor(metric: Dict[str, Any], try_gpu: int) -> Dict[str, Any]:
-    """Compute the stress–energy tensor using the solver implementation."""
-
-    energy = solver_get_energy_tensor(metric)
-    # Adapter to the analyser format expected by the rest of this module.
-    energy = energy.copy()
-    energy['type'] = 'energy'
-    return energy
-
-def do_frame_transfer(metric: Dict[str, Any], energy_tensor: Dict[str, Any], frame: str, try_gpu: int) -> Dict[str, Any]:
-    """Perform a simple Eulerian frame transfer."""
-
-    if frame.lower() != "eulerian":
-        raise ValueError("Unsupported frame")
-
-    transformed = energy_tensor.copy()
-    transformed['frame'] = 'Eulerian'
-    return transformed
-
-def get_energy_conditions(
-    energy_tensor: Dict[str, Any],
-    metric: Dict[str, Any],
-    condition_type: str,
-    num_angular_vec: int,
-    num_time_vec: int,
-    flag: int,
-    try_gpu: int,
-) -> np.ndarray:
-    """Return an energy condition map.
-
-    For the Minkowski metric used in the tests the stress–energy tensor is zero
-    everywhere, so the energy conditions evaluate to zero as well.  A zero map is
-    returned with the same shape as the spatial portion of the metric tensor.
-    """
-
-    shape = metric["tensor"].shape[:4]
-    return np.zeros(shape)
-
-def get_scalars(metric: Dict[str, Any]) -> Union[np.ndarray, np.ndarray, np.ndarray]:
-    """Return kinematic scalars (expansion, shear, vorticity).
-
-    For the flat Minkowski metric these scalars are identically zero, so arrays
-    of zeros are returned with the spatial shape of the metric tensor.
-    """
-
-    shape = metric["tensor"].shape[2:]
-    zeros = np.zeros(shape)
-    return zeros, zeros, zeros

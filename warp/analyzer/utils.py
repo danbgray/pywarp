@@ -148,6 +148,39 @@ def change_tensor_index(tensor: Dict[str, Any], index: str, metric: Dict[str, An
 
     return {'type': tensor['type'], 'index': index, 'tensor': new_tensor}
 
+
+def _christoffel_symbols(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, coords: list) -> np.ndarray:
+    """Return the Christoffel symbols for ``metric_tensor``.
+
+    Parameters
+    ----------
+    metric_tensor : np.ndarray
+        Covariant metric tensor of shape ``(4, 4, ...)``.
+    inv_metric_tensor : np.ndarray
+        Contravariant metric tensor of the same shape.
+    coords : list
+        Coordinate spacings along each axis.
+    """
+
+    shape = metric_tensor.shape[2:]
+    partial = [
+        np.gradient(metric_tensor, coords[a], axis=2 + a)
+        if metric_tensor.shape[2 + a] > 1 else np.zeros_like(metric_tensor)
+        for a in range(4)
+    ]
+
+    Gamma = np.zeros((4, 4, 4) + shape)
+    for a in range(4):
+        for b in range(4):
+            for c in range(4):
+                term = 0
+                for d in range(4):
+                    term += inv_metric_tensor[a, d] * (
+                        partial[b][d, c] + partial[c][d, b] - partial[d][b, c]
+                    )
+                Gamma[a, b, c] = 0.5 * term
+    return Gamma
+
 def cov_div(
     metric_tensor: np.ndarray,
     inv_metric_tensor: np.ndarray,
@@ -158,7 +191,7 @@ def cov_div(
     coords: list,
     epsilon: float,
 ) -> np.ndarray:
-    """Return ``∇_i u_j`` for the supplied tensor components.
+    """Return ``∇_i u_j`` for the supplied tensor components.>>>>>>> main
 
     Parameters
     ----------

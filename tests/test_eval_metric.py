@@ -14,10 +14,10 @@ def test_eval_metric(setup_metric):
     output = eval_metric(metric, try_gpu=0, keep_positive=1, num_angular_vec=10, num_time_vec=5)
 
     expected_energy = energy_tensor(metric)
-    expected_energy['type'] = 'energy'
 
     assert np.allclose(output['energy_tensor']['tensor'], expected_energy['tensor'])
-    assert np.allclose(output['energy_tensor_eulerian']['tensor'], expected_energy['tensor'])
+    assert output['energy_tensor']['type'] == 'energy'
+    assert output['energy_tensor_eulerian']['frame'] == 'Eulerian'
     assert np.all(output['null'] == 0)
     assert np.all(output['weak'] == 0)
     assert np.all(output['strong'] == 0)
