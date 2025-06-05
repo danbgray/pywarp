@@ -2,15 +2,63 @@ import numpy as np
 from warp.analyzer.change_tensor_index import change_tensor_index
 from warp.analyzer.utils import cov_div, get_trace
 
+
 def three_plus_one_decomposer(metric):
-    shape = metric['tensor'].shape[2:]
-    alpha = np.ones(shape)
-    beta = np.zeros((3,) + shape)
-    gamma = np.zeros((3, 3) + shape)
-    beta_up = np.zeros((3,) + shape)
-    beta_down = np.zeros((3,) + shape)
+    """Return the 3+1 decomposition of ``metric``.
+
+    Parameters
+    ----------
+    metric : dict
+        Metric dictionary with a covariant tensor of shape ``(4, 4, ...)``.
+
+    Returns
+    -------
+    tuple
+        ``alpha, beta, gamma, beta_up, beta_down`` where ``alpha`` is the lapse
+        function, ``beta`` is the covariant shift vector, ``gamma`` is the
+        spatial metric and ``beta_up``/``beta_down`` are the contravariant and
+        covariant versions of the shift vector.
+    """
+
+    if metric["index"].lower() != "covariant":
+        raise ValueError("Metric must be in covariant index for decomposition")
+
+    g = np.array(metric["tensor"], dtype=float)
+    shape = g.shape[2:]
+
+    # Inverse metric at every grid cell
+    flat = g.reshape(4, 4, -1)
+    inv_flat = np.empty_like(flat)
+    for idx in range(flat.shape[-1]):
+        inv_flat[:, :, idx] = np.linalg.inv(flat[:, :, idx])
+    g_inv = inv_flat.reshape(4, 4, *shape)
+
+    gamma = g[1:, 1:, ...]
+    beta_down = g[0, 1:, ...]
+
+    # Inverse of the spatial metric
+    flat_gamma = gamma.reshape(3, 3, -1)
+    inv_flat_gamma = np.empty_like(flat_gamma)
+    for idx in range(flat_gamma.shape[-1]):
+        inv_flat_gamma[:, :, idx] = np.linalg.inv(flat_gamma[:, :, idx])
+    gamma_inv = inv_flat_gamma.reshape(3, 3, *shape)
+
+    alpha = 1.0 / np.sqrt(-g_inv[0, 0])
+    beta_up = np.einsum("ij...,j...->i...", gamma_inv, beta_down)
+
+    beta = beta_down
 
     return alpha, beta, gamma, beta_up, beta_down
+
+
+def _invert_metric(tensor: np.ndarray) -> np.ndarray:
+    """Return the matrix inverse of ``tensor`` at each grid point."""
+    shape = tensor.shape[2:]
+    flat = tensor.reshape(4, 4, -1)
+    inv_flat = np.empty_like(flat)
+    for idx in range(flat.shape[-1]):
+        inv_flat[:, :, idx] = np.linalg.inv(flat[:, :, idx])
+    return inv_flat.reshape(4, 4, *shape)
 
 def get_scalars(metric):
     """Return kinematic scalars for ``metric``.
@@ -34,38 +82,32 @@ def get_scalars(metric):
     if np.allclose(array_metric_tensor, expected):
         raise ValueError("Minkowski metric provided; scalars are undefined.")
 
-    alpha, _, _, beta_up, _ = three_plus_one_decomposer(metric)
+    alpha, beta_down, _, beta_up, _ = three_plus_one_decomposer(metric)
 
-    array_beta = np.array(beta_up)
     s = array_metric_tensor.shape[2:]
 
-    u_up = np.zeros((4, 4) + s)
-    u_up[0, 0, ...] = 1 / alpha
-    u_up[0, 1:, ...] = -array_beta / alpha
-    u_up[1:, 0, ...] = -array_beta / alpha
-    u_up[1:, 1:, ...] = np.zeros(array_beta.shape)
+    u_up = np.zeros((4,) + s)
+    u_up[0] = 1.0 / alpha
+    u_up[1:] = -beta_up / alpha
 
     u_down = np.einsum('ij...,j...->i...', array_metric_tensor, u_up)
 
-    u_up_cell = [u_up[i, j, ...] for i in range(4) for j in range(4)]
-    u_down_cell = [u_down[i, j, ...] for i in range(4) for j in range(4)]
-
     metric = change_tensor_index(metric, 'covariant')
-
     try:
-        inv_metric_tensor = np.linalg.inv(metric['tensor'])
+        inv_metric_tensor = _invert_metric(metric['tensor'])
     except np.linalg.LinAlgError:
-        print(metric['tensor'])
         raise ValueError("Metric tensor is singular and cannot be inverted.")
 
-    del_u_components = np.array([
-        cov_div(metric['tensor'], inv_metric_tensor, u_up_cell, u_down_cell, i, j, [1, 1, 1, 1], 0)
-        for i in range(4) for j in range(4)
-    ])
-    del_u_components = del_u_components.reshape(4, 4, *s)
+    coords = metric.get('scaling', [1, 1, 1, 1])
 
-    P_mix = np.eye(4) + np.einsum('...i,...j->...ij', u_up, u_down)
-    P = array_metric_tensor + np.einsum('...i,...j->...ij', u_down, u_down)
+    del_u_components = np.array([
+        cov_div(metric['tensor'], inv_metric_tensor, u_down, i, j, coords)
+        for i in range(4) for j in range(4)
+    ]).reshape(4, 4, *s)
+
+    eye = np.eye(4)
+    P_mix = eye[:, :, None] + np.einsum('i...,j...->ij...', u_up, u_down)
+    P = array_metric_tensor + np.einsum('i...,j...->ij...', u_down, u_down)
 
     theta = {'index': "covariant", 'type': "tensor", 'tensor': np.zeros((4, 4) + s)}
     omega = {'index': "covariant", 'type': "tensor", 'tensor': np.zeros((4, 4) + s)}
