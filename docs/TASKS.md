@@ -14,6 +14,10 @@ This document lists tasks for enhancing flow line visualization and the backend 
   - Include visual comparisons of original and improved flow lines.
   - Provide references to relevant sections of the PDF.
 - [x] Validate notebook cells so that example graphs show non-empty trajectories.
+- [ ] Document common errors (e.g. singular matrices) and provide working
+  Alcubierre parameters.
+- [ ] Extend the notebook with a section plotting energy conditions using
+  `plotly` for a valid Alcubierre warp bubble.
 
 ## Miscellaneous
 - [x] Add examples to the README that showcase how to run the notebook and interpret the results.

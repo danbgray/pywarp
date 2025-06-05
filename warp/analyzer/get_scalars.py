@@ -101,7 +101,7 @@ def get_scalars(metric):
     coords = metric.get('scaling', [1, 1, 1, 1])
 
     del_u_components = np.array([
-        cov_div(metric['tensor'], inv_metric_tensor, u_down, i, j, coords)
+        cov_div(metric['tensor'], inv_metric_tensor, u_up, u_down, i, j, coords)
         for i in range(4) for j in range(4)
     ]).reshape(4, 4, *s)
 
