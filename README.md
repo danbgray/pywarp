@@ -27,7 +27,7 @@ If you prefer working with `pipenv`, clone the repository and run the helper
 script which installs all Python dependencies:
 
 ```bash
-git clone https://github.com/yourusername/pywarp.git
+git clone https://github.com/danbgray/pywarp.git
 cd pywarp
 ./scripts/install.sh
 pipenv shell
