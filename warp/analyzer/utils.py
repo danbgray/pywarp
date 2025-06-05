@@ -148,22 +148,65 @@ def change_tensor_index(tensor: Dict[str, Any], index: str, metric: Dict[str, An
 
     return {'type': tensor['type'], 'index': index, 'tensor': new_tensor}
 
-def cov_div(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, u_up_cell: np.ndarray, u_down_cell: np.ndarray, i: int, j: int, coords: list, epsilon: float) -> np.ndarray:
-    """
-    Calculate the covariant derivative of the tensor.
 
-    Args:
-        metric_tensor (np.ndarray): Metric tensor.
-        inv_metric_tensor (np.ndarray): Inverse of the metric tensor.
-        u_up_cell (np.ndarray): Upper indices of the tensor.
-        u_down_cell (np.ndarray): Lower indices of the tensor.
-        i (int): Index i.
-        j (int): Index j.
-        coords (list): Coordinates.
-        epsilon (float): Small epsilon value.
+def _christoffel_symbols(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, coords: list) -> np.ndarray:
+    """Return the Christoffel symbols for ``metric_tensor``.
 
-    Returns:
-        np.ndarray: Covariant derivative of the tensor.
+    Parameters
+    ----------
+    metric_tensor : np.ndarray
+        Covariant metric tensor of shape ``(4, 4, ...)``.
+    inv_metric_tensor : np.ndarray
+        Contravariant metric tensor of the same shape.
+    coords : list
+        Coordinate spacings along each axis.
     """
-    # Placeholder implementation, the actual implementation might be different.
-    return np.einsum('...k,...k->...', u_up_cell[i], u_down_cell[j])
+
+    shape = metric_tensor.shape[2:]
+    partial = [
+        np.gradient(metric_tensor, coords[a], axis=2 + a)
+        if metric_tensor.shape[2 + a] > 1 else np.zeros_like(metric_tensor)
+        for a in range(4)
+    ]
+
+    Gamma = np.zeros((4, 4, 4) + shape)
+    for a in range(4):
+        for b in range(4):
+            for c in range(4):
+                term = 0
+                for d in range(4):
+                    term += inv_metric_tensor[a, d] * (
+                        partial[b][d, c] + partial[c][d, b] - partial[d][b, c]
+                    )
+                Gamma[a, b, c] = 0.5 * term
+    return Gamma
+
+def cov_div(metric_tensor: np.ndarray, inv_metric_tensor: np.ndarray, u_down: np.ndarray, i: int, j: int, coords: list) -> np.ndarray:
+    """Covariant derivative ``∇_j u_i`` for a covariant vector ``u``.
+
+    Parameters
+    ----------
+    metric_tensor : np.ndarray
+        Metric tensor ``g_{ab}``.
+    inv_metric_tensor : np.ndarray
+        Inverse metric ``g^{ab}``.
+    u_down : np.ndarray
+        Covariant components of the vector ``u`` with shape ``(4, ...)``.
+    i, j : int
+        Indices of the derivative.
+    coords : list
+        Coordinate spacings.
+    """
+
+    axis = 1 + j
+    if u_down.shape[axis] > 1:
+        partial = np.gradient(u_down[i], coords[j], axis=axis)
+    else:
+        partial = np.zeros_like(u_down[i])
+
+    Gamma = _christoffel_symbols(metric_tensor, inv_metric_tensor, coords)
+
+    result = partial.copy()
+    for k in range(4):
+        result -= Gamma[k, i, j] * u_down[k]
+    return result
