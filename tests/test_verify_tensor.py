@@ -8,9 +8,8 @@ def test_verify_tensor_valid():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         input_tensor = {
-            'type': "Metric",
-            'tensor': np.zeros((4, 4, 2, 2, 2, 2)),
-            'coords': "cartesian",
+            'type': "metric",
+            'tensor': np.zeros((4, 4, 4, 4)),
             'index': "covariant"
         }
 
@@ -23,9 +22,8 @@ def test_verify_tensor_missing_type():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         input_tensor = {
-            'type': "Metric",
-            'tensor': np.zeros((4, 4, 2, 2, 2, 2)),
-            'coords': "cartesian",
+            'type': "metric",
+            'tensor': np.zeros((4, 4, 4, 4)),
             'index': "covariant"
         }
         input_tensor.pop('type')

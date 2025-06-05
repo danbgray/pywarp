@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Any, Dict
+from warp.solver import verify_tensor
 
 def generate_uniform_field(field_type: str, num_angular_vec: int, num_time_vec: int = 1) -> np.ndarray:
     """
@@ -88,25 +89,6 @@ def get_trace(tensor: Dict[str, Any], metric: Dict[str, Any]) -> np.ndarray:
         np.ndarray: Trace of the tensor.
     """
     return np.einsum('...ij,...ij->...', metric['tensor'], tensor['tensor'])
-
-def verify_tensor(tensor: Dict[str, Any]) -> bool:
-    """
-    Verify the tensor format.
-
-    Args:
-        tensor (dict): Tensor to verify.
-
-    Returns:
-        bool: True if tensor is valid, False otherwise.
-    """
-    required_keys = {'type', 'index', 'tensor'}
-    if not required_keys.issubset(tensor.keys()):
-        return False
-    if tensor['type'] not in {'metric', 'energy'}:
-        return False
-    if not isinstance(tensor['tensor'], np.ndarray):
-        return False
-    return True
 
 def get_minkowski_metric(shape: list) -> Dict[str, Any]:
     """

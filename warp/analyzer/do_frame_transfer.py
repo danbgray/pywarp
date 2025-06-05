@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Dict, Any, Union
+from warp.solver import verify_tensor
 
 def do_frame_transfer(metric: Dict[str, Any], energy_tensor: Dict[str, Any], frame: str, try_gpu: int = 0) -> Dict[str, Any]:
     """
@@ -59,25 +60,6 @@ def do_frame_transfer(metric: Dict[str, Any], energy_tensor: Dict[str, Any], fra
         raise ValueError("Unsupported frame or frame already set to 'Eulerian'.")
 
     return transformed_energy_tensor
-
-def verify_tensor(tensor: Dict[str, Any]) -> bool:
-    """
-    Verify the tensor format.
-
-    Args:
-        tensor (dict): Tensor to verify.
-
-    Returns:
-        bool: True if tensor is valid, False otherwise.
-    """
-    required_keys = {'type', 'index', 'tensor'}
-    if not required_keys.issubset(tensor.keys()):
-        return False
-    if tensor['type'] not in {'metric', 'energy'}:
-        return False
-    if not isinstance(tensor['tensor'], np.ndarray):
-        return False
-    return True
 
 def change_tensor_index(tensor: Dict[str, Any], index: str, metric: Dict[str, Any]) -> Dict[str, Any]:
     """

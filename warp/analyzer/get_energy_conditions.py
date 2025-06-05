@@ -1,6 +1,7 @@
 from typing import Dict, Any, Tuple, Union
 import numpy as np
-from warp.analyzer.utils import change_tensor_index, generate_uniform_field, get_minkowski_metric, get_trace, verify_tensor, do_frame_transfer, get_inner_product
+from warp.analyzer.utils import change_tensor_index, generate_uniform_field, get_minkowski_metric, get_trace, do_frame_transfer, get_inner_product
+from warp.solver import verify_tensor
 from warp.metrics.get_minkowski import metric_get_minkowski
 
 def get_energy_conditions(energy_tensor: Dict[str, Any], metric: Dict[str, Any], condition: str, num_angular_vec: int = 100, num_time_vec: int = 10, return_vec: int = 0) -> Tuple[np.ndarray, Union[np.ndarray, None], Union[np.ndarray, None]]:
