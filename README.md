@@ -64,6 +64,10 @@ Example notebooks are located in the `notebooks/` directory. Start Jupyter and o
 and visualizes the result using Plotly. The `rust_demo.ipynb` notebook shows the same
 workflow using the Rust extensions for faster linear algebra.
 
+The flow line examples demonstrated in the notebook follow the guidelines
+outlined in `docs/2102.06824v2.pdf`. After installing the dependencies you can
+launch the notebook with:
+
 ```bash
 jupyter notebook notebooks/intro.ipynb
 ```

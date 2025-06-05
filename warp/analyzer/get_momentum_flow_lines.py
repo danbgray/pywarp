@@ -1,16 +1,28 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
-def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, scale_factor):
-    """
-    Gets the momentum flow lines for an energy tensor.
+def get_momentum_flow_lines(
+    energy_tensor,
+    start_points,
+    step_size,
+    max_steps,
+    scale_factor,
+    *,
+    momentum_threshold=1e-8,
+    adaptive=False,
+):
+    """Compute momentum flow lines for an energy tensor.
 
     Parameters:
     energy_tensor (np.ndarray): Energy tensor (should be contravariant), shape (4, 4, dim_x, dim_y, dim_z).
     start_points (list): List of 3 arrays containing the start points of flowlines.
-    step_size (float): Step size of the flowline propagation.
+    step_size (float): Base step size of the flowline propagation.
     max_steps (int): Maximum number of propagation steps to run.
     scale_factor (float): Scaling factor that multiplies the momentum density.
+    momentum_threshold (float, optional): Minimum momentum magnitude required
+        to continue propagation. Default ``1e-8``.
+    adaptive (bool, optional): If ``True`` the step direction is normalised so
+        each step has length ``step_size``. Default ``False``.
 
     Returns:
     list: List of paths, each path is an array of shape (M, 3).
@@ -42,7 +54,9 @@ def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, s
 
         for i in range(max_steps - 1):
             pos = path[i]
-            if np.any(np.isnan(pos)) or np.any(pos < 0) or np.any(pos >= [Xmom.shape[0], Xmom.shape[1], Xmom.shape[2]]):
+            if np.any(np.isnan(pos)) or np.any(pos < 0) or np.any(
+                pos >= [Xmom.shape[0], Xmom.shape[1], Xmom.shape[2]]
+            ):
                 break
 
             # Interpolate the momentum
@@ -54,8 +68,17 @@ def get_momentum_flow_lines(energy_tensor, start_points, step_size, max_steps, s
             if np.any(np.isnan(momentum)):
                 break
 
+            momentum_norm = np.linalg.norm(momentum)
+            if momentum_norm < momentum_threshold:
+                break
+
+            if adaptive and momentum_norm > 0:
+                step_vec = momentum / momentum_norm * step_size
+            else:
+                step_vec = momentum * step_size
+
             # Propagate position
-            path[i + 1] = pos + momentum * step_size
+            path[i + 1] = pos + step_vec
             step_count += 1
 
         paths.append(path[:step_count])
