@@ -7,20 +7,34 @@ PyWarp is a Python package for calculating the stress-energy tensor from a given
 ## Installation
 
 PyWarp uses a Rust extension built with [maturin](https://github.com/PyO3/maturin).
-The extension is compiled automatically when installing the package via `pip`:
+You can either install the package directly with `pip` or set up a development
+environment using the helper script.
+
+### Standard `pip` install
+
+Create a fresh virtual environment and install the project. The Rust extension
+is compiled automatically during installation.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install .
 ```
 
-For development you can still use the helper script which installs the Python
-dependencies using `pipenv`:
+### Development setup with `scripts/install.sh`
+
+If you prefer working with `pipenv`, clone the repository and run the helper
+script which installs all Python dependencies:
 
 ```bash
 git clone https://github.com/yourusername/pywarp.git
 cd pywarp
 ./scripts/install.sh
+pipenv shell
+maturin develop
 ```
+Running `maturin develop` compiles the `warp_core` crate and installs it into
+the active environment.
 
 ## Usage
 
@@ -74,24 +88,28 @@ jupyter notebook notebooks/intro.ipynb
 
 ## Building the Rust extension
 
-The `c4_inv` routine is implemented in Rust for improved performance. When the
-package is installed with `pip` the extension is compiled automatically via the
-`pyproject.toml` configuration. If you need to rebuild the extension while
-developing, run:
+The `c4_inv` routine is implemented in Rust for improved performance. Installing
+the project with `pip` or running `maturin develop` will compile the extension
+for the active environment. To rebuild the extension during development run:
 
 ```bash
 maturin develop
 ```
 This command compiles the `warp_core` crate and installs it into the current
-environment.
+environment. To create a wheel manually you can also run `maturin build`.
 
 ## Testing
 
-The test suite uses `pytest`. Make sure the project dependencies are installed
-before running the tests:
+The test suite uses `pytest`. After setting up a clean environment and building
+the Rust extension you can run the tests. When using `pipenv` the commands are:
 
 ```bash
-pipenv install; pipenv shell
-pytest
+./scripts/install.sh
+pipenv shell
+maturin develop
+pipenv run pytest
 ```
+
+If you installed the package with `pip` in a virtualenv simply run `pytest` from
+that environment.
 
