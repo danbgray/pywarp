@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Any, Dict
-from warp.solver import verify_tensor
+from warp.solver import verify_tensor, c4Inv
 
 def generate_uniform_field(field_type: str, num_angular_vec: int, num_time_vec: int = 1) -> np.ndarray:
     """
@@ -46,14 +46,16 @@ def get_eulerian_transformation_matrix(metric_tensor: np.ndarray, coords: Any) -
 
     # Diagonal components of the metric are used to normalise the tetrad
     diag = np.diagonal(metric_tensor, axis1=0, axis2=1)
+    # Move the diagonal index to the front so broadcasting works with transform
+    diag = np.moveaxis(diag, -1, 0)
 
     m_shape = (4, 4) + metric_tensor.shape[2:]
     transform = np.zeros(m_shape, dtype=metric_tensor.dtype)
 
-    transform[0, 0] = 1.0 / np.sqrt(-diag[0])
-    transform[1, 1] = 1.0 / np.sqrt(diag[1])
-    transform[2, 2] = 1.0 / np.sqrt(diag[2])
-    transform[3, 3] = 1.0 / np.sqrt(diag[3])
+    transform[0, 0] = 1.0 / np.sqrt(np.abs(-diag[0]))
+    transform[1, 1] = 1.0 / np.sqrt(np.abs(diag[1]))
+    transform[2, 2] = 1.0 / np.sqrt(np.abs(diag[2]))
+    transform[3, 3] = 1.0 / np.sqrt(np.abs(diag[3]))
 
     return transform
 
@@ -154,7 +156,9 @@ def change_tensor_index(tensor: Dict[str, Any], index: str, metric: Dict[str, An
         return tensor
 
     if index == "covariant" and tensor['index'] == "contravariant":
-        inv_metric = np.linalg.inv(metric['tensor'])
+        # Use blockwise inversion to avoid singular matrix errors when np.linalg.inv
+        # struggles with stacked metrics
+        inv_metric = c4Inv(metric['tensor'])
         new_tensor = np.einsum('...ij,...jk,...kl->...il', inv_metric, tensor['tensor'], inv_metric)
     elif index == "contravariant" and tensor['index'] == "covariant":
         new_tensor = np.einsum('...ij,...jk,...kl->...il', metric['tensor'], tensor['tensor'], metric['tensor'])
@@ -204,7 +208,7 @@ def cov_div(
     i: int,
     j: int,
     coords: list,
-    epsilon: float,
+    epsilon: float | None = None,
 ) -> np.ndarray:
     """Return ``∇_i u_j`` for the supplied tensor components.>>>>>>> main
 
@@ -215,7 +219,7 @@ def cov_div(
     inv_metric_tensor : np.ndarray
         Inverse metric tensor with contravariant indices of shape ``(4, 4, ...)``.
     u_up_cell : sequence of np.ndarray
-        Contravariant components ``u^k`` evaluated on the grid.
+        Unused contravariant components ``u^k`` (retained for API compatibility).
     u_down_cell : sequence of np.ndarray
         Covariant components ``u_k`` evaluated on the grid.
     i : int
@@ -224,8 +228,6 @@ def cov_div(
         Component index being differentiated.
     coords : list
         Grid spacing for each coordinate direction.
-    epsilon : float
-        Unused small parameter kept for backwards compatibility.
 
     Returns
     -------
@@ -234,7 +236,11 @@ def cov_div(
     """
 
     # Gradient of the j-th covariant component along axis ``i``
-    du = np.gradient(u_down_cell[j], coords[i], axis=i)
+    comp = u_down_cell[j]
+    if comp.shape[i] < 2:
+        du = np.zeros_like(comp)
+    else:
+        du = np.gradient(comp, coords[i], axis=i)
 
     # Compute Christoffel symbols Γ^k_{j i}
     s = metric_tensor.shape[2:]
@@ -242,9 +248,20 @@ def cov_div(
     for k in range(4):
         acc = 0
         for l in range(4):
-            dg_lj_i = np.gradient(metric_tensor[l, j], coords[i], axis=i)
-            dg_il_j = np.gradient(metric_tensor[i, l], coords[j], axis=j)
-            dg_ij_l = np.gradient(metric_tensor[i, j], coords[l], axis=l)
+            if metric_tensor.shape[2 + i] < 2:
+                dg_lj_i = np.zeros_like(metric_tensor[l, j])
+            else:
+                dg_lj_i = np.gradient(metric_tensor[l, j], coords[i], axis=i)
+
+            if metric_tensor.shape[2 + j] < 2:
+                dg_il_j = np.zeros_like(metric_tensor[i, l])
+            else:
+                dg_il_j = np.gradient(metric_tensor[i, l], coords[j], axis=j)
+
+            if metric_tensor.shape[2 + l] < 2:
+                dg_ij_l = np.zeros_like(metric_tensor[i, j])
+            else:
+                dg_ij_l = np.gradient(metric_tensor[i, j], coords[l], axis=l)
             acc += 0.5 * inv_metric_tensor[k, l] * (
                 dg_lj_i + dg_il_j - dg_ij_l
             )

@@ -12,7 +12,7 @@ def setup_tensors():
         'type': 'metric',
         'index': 'covariant',
         'tensor': np.random.rand(4, 4, 4, 4),
-        'coords': None  # Placeholder for actual coordinates
+        'coords': 'cartesian'
     }
     energy_tensor = {
         'type': 'energy',
