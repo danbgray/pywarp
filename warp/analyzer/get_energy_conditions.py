@@ -1,6 +1,13 @@
 from typing import Dict, Any, Tuple, Union
 import numpy as np
-from warp.analyzer.utils import change_tensor_index, generate_uniform_field, get_minkowski_metric, get_trace, do_frame_transfer, get_inner_product
+from warp.analyzer.utils import (
+    change_tensor_index,
+    generate_uniform_field,
+    get_minkowski_metric,
+    get_trace,
+    do_frame_transfer,
+    get_inner_product,
+)
 from warp.solver import verify_tensor
 from warp.metrics.get_minkowski import metric_get_minkowski
 
@@ -94,17 +101,3 @@ def get_energy_conditions(energy_tensor: Dict[str, Any], metric: Dict[str, Any],
                     vec[:, :, :, :, ii, jj] = temp
 
     return map, vec, vec_field if return_vec else None
-
-def get_inner_product(vector1: Dict[str, np.ndarray], vector2: Dict[str, np.ndarray], metric: Dict[str, Any]) -> np.ndarray:
-    """
-    Calculate the inner product of two vectors using the given metric tensor.
-
-    Args:
-        vector1 (dict): First vector.
-        vector2 (dict): Second vector.
-        metric (dict): Metric tensor.
-
-    Returns:
-        np.ndarray: Inner product result.
-    """
-    return np.einsum('i...,ij...,j...->...', vector1['field'], metric['tensor'], vector2['field'])
