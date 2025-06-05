@@ -159,69 +159,86 @@ def einT(ricci_tensor, ricci_scalar, metric):
     return einstein_tensor
 
 def einE(einstein_tensor, inv_metric):
-    """
-    Computes the energy density tensor from the Einstein tensor and inverse metric.
+    """Raise indices of the Einstein tensor to obtain the stress-energy tensor.
 
-    Args:
-    - einstein_tensor (np.ndarray): The Einstein tensor.
-    - inv_metric (np.ndarray): The inverse metric tensor.
+    Parameters
+    ----------
+    einstein_tensor : np.ndarray
+        Einstein tensor with covariant indices.
+    inv_metric : np.ndarray
+        Inverse metric used to raise the indices.
 
-    Returns:
-    - np.ndarray: The energy density tensor.
+    Returns
+    -------
+    np.ndarray
+        Contravariant stress-energy tensor with shape ``(4, 4, ...)`` matching
+        the spatial dimensions of ``einstein_tensor``.
     """
-    energy_density = np.einsum('...ij,...ij', einstein_tensor, inv_metric)
-    return energy_density
+    return np.einsum("...ij,...ik,...jl->...kl", einstein_tensor, inv_metric, inv_metric)
 
 def met2den(tensor, scaling):
-    """
-    Converts a metric tensor to the corresponding energy density tensor using the Einstein Field Equations.
+    """Convert a metric tensor to its stress-energy tensor.
 
-    Args:
-    - tensor (np.ndarray): The metric tensor.
-    - scaling (list or np.ndarray): Scaling factors for each axis of the tensor.
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Metric tensor with covariant indices.
+    scaling : list or np.ndarray
+        Grid spacing for each axis.
 
-    Returns:
-    - np.ndarray: The energy density tensor.
+    Returns
+    -------
+    np.ndarray
+        Contravariant stress-energy tensor.
     """
     inv_metric = c4Inv(tensor)
     ricci_tensor = ricciT(inv_metric, tensor, scaling)
     ricci_scalar = ricciS(ricci_tensor, inv_metric)
     einstein_tensor = einT(ricci_tensor, ricci_scalar, tensor)
-    energy_density = einE(einstein_tensor, inv_metric)
-    return energy_density
+    return einE(einstein_tensor, inv_metric)
 
 def met2den2(tensor, scaling):
-    """
-    Converts a metric tensor to the corresponding energy density tensor using the Einstein Field Equations
-    with an alternative method.
+    """Alternate method to compute the stress-energy tensor from a metric.
 
-    Args:
-    - tensor (np.ndarray): The metric tensor.
-    - scaling (list or np.ndarray): Scaling factors for each axis of the tensor.
+    Parameters
+    ----------
+    tensor : np.ndarray
+        Metric tensor with covariant indices.
+    scaling : list or np.ndarray
+        Grid spacing for each axis.
 
-    Returns:
-    - np.ndarray: The energy density tensor.
+    Returns
+    -------
+    np.ndarray
+        Contravariant stress-energy tensor.
     """
     inv_metric = c4Inv(tensor)
     ricci_tensor = ricciT(inv_metric, tensor, scaling)
     ricci_scalar = ricciS(ricci_tensor, inv_metric)
     einstein_tensor = einT(ricci_tensor, ricci_scalar, tensor)
-    energy_density = einE(einstein_tensor, inv_metric)
-    return energy_density
+    return einE(einstein_tensor, inv_metric)
 
 def get_energy_tensor(metric, diffOrder='fourth'):
-    """
-    Computes the energy tensor from a metric tensor using the Einstein Field Equations.
+    """Compute the contravariant stress-energy tensor from ``metric``.
 
-    Args:
-    - metric (dict): A dictionary containing the metric tensor and its properties.
-    - diffOrder (str, optional): The order of differentiation ('second' or 'fourth'). Defaults to 'fourth'.
+    Parameters
+    ----------
+    metric : dict
+        Metric tensor dictionary with a covariant ``tensor`` entry.
+    diffOrder : str, optional
+        Differentiation order to use (``'second'`` or ``'fourth'``),
+        by default ``'fourth'``.
 
-    Returns:
-    - dict: A dictionary containing the energy tensor and its properties.
+    Returns
+    -------
+    dict
+        Dictionary containing the stress-energy tensor and metadata.  The tensor
+        has shape ``(4, 4, *metric['tensor'].shape[2:])``.
 
-    Raises:
-    - ValueError: If the diffOrder is not 'second' or 'fourth' or if the metric index is not 'covariant'.
+    Raises
+    ------
+    ValueError
+        If ``diffOrder`` is invalid or the metric index is not ``covariant``.
     """
     if diffOrder not in ['second', 'fourth']:
         raise ValueError("Order Flag Not Specified Correctly. Options: 'fourth' or 'second'")
