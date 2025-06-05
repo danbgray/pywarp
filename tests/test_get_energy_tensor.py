@@ -14,7 +14,7 @@ def test_get_energy_tensor():
 
     Assertions:
     - The type of the resulting tensor should be "Stress-Energy".
-    - The shape of the resulting tensor should be (4, 4, 2, 2).
+    - The shape of the resulting tensor should be (4, 4, 2, 2, 2, 2).
     - The coordinates of the resulting tensor should be "cartesian".
     - The index type of the resulting tensor should be "contravariant".
     - The order of the computation should be "fourth".
@@ -45,7 +45,7 @@ def test_get_energy_tensor():
 
     # Assertions to validate the results
     assert energy['type'] == "Stress-Energy"
-    assert energy['tensor'].shape == (4, 4, 2, 2)
+    assert energy['tensor'].shape == (4, 4, 2, 2, 2, 2)
     assert energy['coords'] == "cartesian"
     assert energy['index'] == "contravariant"
     assert energy['order'] == 'fourth'

@@ -2,7 +2,7 @@
 
 Pywarp is a set of functions and methods to evaluate warp drive spacetimes using Einstein's theory of General Relativity inspired by Warp Factory https://github.com/NerdsWithAttitudes/WarpFactory as a numerical process.
 
-PyWarp is a Python package for calculating the energy tensor from a given metric tensor using Einstein's Field Equations. This package provides a set of functions to compute various tensors, including the Ricci tensor, Ricci scalar, Einstein tensor, and the energy density tensor.
+PyWarp is a Python package for calculating the stress-energy tensor from a given metric tensor using Einstein's Field Equations. This package provides a set of functions to compute various tensors, including the Ricci tensor, Ricci scalar, Einstein tensor, and the stress-energy tensor itself.
 
 ## Installation
 
@@ -49,7 +49,7 @@ metric = {
 
 energy = energy_tensor(metric, diff_order='fourth')
 
-print("Energy Tensor:", energy)
+print("Energy Tensor shape:", energy['tensor'].shape)
 ```
 
 For sweeps over multiple metrics you can use `run_parameter_sweep` from the `warp.pipeline` module.
