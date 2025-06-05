@@ -13,10 +13,26 @@ def three_plus_one_decomposer(metric):
     return alpha, beta, gamma, beta_up, beta_down
 
 def get_scalars(metric):
+    """Return kinematic scalars for ``metric``.
+
+    The function is undefined for the flat Minkowski metric.  If the supplied
+    metric tensor matches the standard Minkowski tensor a ``ValueError`` is
+    raised.
+    """
+
     array_metric_tensor = np.array(metric['tensor'])
 
     if array_metric_tensor.shape[0:2] != (4, 4):
         raise ValueError("Metric tensor must have shape (4, 4, ...).")
+
+    expected = np.zeros_like(array_metric_tensor)
+    expected[0, 0, ...] = -1
+    expected[1, 1, ...] = 1
+    expected[2, 2, ...] = 1
+    expected[3, 3, ...] = 1
+
+    if np.allclose(array_metric_tensor, expected):
+        raise ValueError("Minkowski metric provided; scalars are undefined.")
 
     alpha, _, _, beta_up, _ = three_plus_one_decomposer(metric)
 
