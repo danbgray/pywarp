@@ -15,11 +15,13 @@ classifiers = [
     "Programming Language :: Rust",
 ]
 
-dependencies = [
-    "numpy",
-    "scipy",
-    "numba",
-]
+
+[project.dependencies]
+numpy = "*"
+scipy = "*"
+numba = "*"
+matplotlib = "*"
+plotly = "*"
 
 [tool.maturin]
 manifest-path = "rust/warp_core/Cargo.toml"
