@@ -16,6 +16,16 @@ Typical steps:
    tensor = energy_tensor(metric)
    results = eval_metric(metric)
    ```
-3. Visualize the results with your preferred plotting library.
+3. Visualize the results with the helpers in ``warp.visualizer``:
+   ```python
+   from warp.visualizer import plot_scalar_field, plot_vector_field
+
+   # Energy conditions are returned as scalar fields
+   fig = plot_scalar_field(results["null"], backend="matplotlib")
+
+   # Momentum flow lines are lists of arrays
+   lines = get_momentum_flow_lines(results["energy_tensor"], [...], 0.1, 100, 1.0)
+   fig2 = plot_vector_field(lines, backend="plotly")
+   ```
 
 Additional examples and visualizations will be added once the pending features from `docs/TASKS.md` are implemented.

@@ -19,6 +19,8 @@ classifiers = [
 numpy = "*"
 scipy = "*"
 numba = "*"
+matplotlib = "*"
+plotly = "*"
 
 [tool.maturin]
 manifest-path = "rust/warp_core/Cargo.toml"

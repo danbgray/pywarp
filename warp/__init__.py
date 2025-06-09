@@ -8,6 +8,7 @@ from .core import (
 )
 
 from .solver import c4Inv
+from .visualizer import plot_tensor, plot_scalar_field, plot_vector_field
 
 __all__ = [
     "alcubierre_metric",
@@ -15,4 +16,8 @@ __all__ = [
     "minkowski_metric",
     "energy_tensor",
     "c4Inv",
+    "plot_tensor",
+    "plot_scalar_field",
+    "plot_vector_field",
 ]
+
