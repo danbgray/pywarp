@@ -1,5 +1,6 @@
 use ndarray::prelude::*;
 use ndarray::s;
+use ndarray::Zip;
 use pyo3::prelude::*;
 use numpy::{PyReadonlyArrayDyn, PyArrayDyn};
 use nalgebra::Matrix4;
