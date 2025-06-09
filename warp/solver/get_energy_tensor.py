@@ -1,6 +1,11 @@
 import numpy as np
 from datetime import date
 from numba import njit
+
+try:
+    import cupy as cp  # type: ignore
+except Exception:  # pragma: no cover - CuPy optional
+    cp = None
 try:
     from warp_core import (
         c4_inv as c4Inv,
@@ -29,7 +34,7 @@ except Exception:  # pragma: no cover - Rust extension optional
         return inv_tensor
 
 
-def takeFiniteDifference1(tensor, axis, delta):
+def takeFiniteDifference1(tensor, axis, delta, try_gpu=0):
     """
     Computes the finite difference (gradient) of a tensor along a specified axis.
 
@@ -41,11 +46,15 @@ def takeFiniteDifference1(tensor, axis, delta):
     Returns:
     - np.ndarray: The tensor of finite differences (gradients) along the specified axis.
     """
-    if rust_take_finite_difference1 is not None:
+    if try_gpu and cp is not None:
+        tensor = cp.asarray(tensor)
+        result = cp.gradient(tensor, delta[axis], axis=axis)
+        return result
+    if rust_take_finite_difference1 is not None and not try_gpu:
         return rust_take_finite_difference1(tensor, axis, delta)
     return np.gradient(tensor, delta[axis], axis=axis)
 
-def takeFiniteDifference2(tensor, axis1, axis2, delta):
+def takeFiniteDifference2(tensor, axis1, axis2, delta, try_gpu=0):
     """
     Computes the second-order finite difference (second derivative) of a tensor along two specified axes.
 
@@ -58,7 +67,13 @@ def takeFiniteDifference2(tensor, axis1, axis2, delta):
     Returns:
     - np.ndarray: The tensor of second-order finite differences (second derivatives) along the specified axes.
     """
-    if rust_take_finite_difference2 is not None:
+    if try_gpu and cp is not None:
+        tensor = cp.asarray(tensor)
+        if axis1 == axis2:
+            return cp.gradient(cp.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
+        else:
+            return cp.gradient(cp.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
+    if rust_take_finite_difference2 is not None and not try_gpu:
         return rust_take_finite_difference2(tensor, axis1, axis2, delta)
     if axis1 == axis2:
         return np.gradient(np.gradient(tensor, delta[axis1], axis=axis1), delta[axis2], axis=axis2)
@@ -102,7 +117,43 @@ def _ricciT_loops(diff1_flat, diff2_flat, inv_flat):
                     ricci_flat[j, i, idx] = temp
     return ricci_flat
 
-def ricciT(inv_metric, metric, delta):
+
+def _ricciT_loops_gpu(diff1_flat, diff2_flat, inv_flat):
+    """CuPy implementation of the Ricci tensor loops."""
+    ricci_flat = cp.zeros((4, 4, diff1_flat.shape[-1]))
+    for i in range(4):
+        for j in range(i, 4):
+            temp = cp.zeros(diff1_flat.shape[-1])
+            for a in range(4):
+                for b in range(4):
+                    temp -= 0.5 * (
+                        diff2_flat[i, j, a, b]
+                        + diff2_flat[a, b, i, j]
+                        - diff2_flat[i, b, j, a]
+                        - diff2_flat[j, b, i, a]
+                    ) * inv_flat[a, b]
+            for a in range(4):
+                for b in range(4):
+                    for c in range(4):
+                        for d in range(4):
+                            temp += 0.5 * (
+                                0.5 * diff1_flat[a, c, i] * diff1_flat[b, d, j]
+                                + diff1_flat[i, c, a] * diff1_flat[j, d, b]
+                                - diff1_flat[i, c, a] * diff1_flat[j, b, d]
+                            ) * inv_flat[a, b] * inv_flat[c, d]
+                            temp -= 0.25 * (
+                                diff1_flat[j, c, i]
+                                + diff1_flat[i, c, j]
+                                - diff1_flat[i, j, c]
+                            ) * (
+                                2 * diff1_flat[b, d, a] - diff1_flat[a, b, d]
+                            ) * inv_flat[a, b] * inv_flat[c, d]
+            ricci_flat[i, j] = temp
+            if i != j:
+                ricci_flat[j, i] = temp
+    return ricci_flat
+
+def ricciT(inv_metric, metric, delta, try_gpu=0):
     """
     Computes the Ricci tensor from the given metric tensor and its inverse.
 
@@ -114,15 +165,40 @@ def ricciT(inv_metric, metric, delta):
     Returns:
     - np.ndarray: The computed Ricci tensor.
     """
+    if try_gpu and cp is not None:
+        metric = cp.asarray(metric)
+        inv_metric = cp.asarray(inv_metric)
+
     s = metric.shape[2:]
-    diff_1_gl = np.array([[takeFiniteDifference1(metric[i, j], k, delta) for k in range(4)] for i in range(4) for j in range(4)]).reshape(4, 4, 4, *s)
-    diff_2_gl = np.array([[[takeFiniteDifference2(metric[i, j], k, n, delta) for n in range(4)] for k in range(4)] for i in range(4) for j in range(4)]).reshape(4, 4, 4, 4, *s)
+    if try_gpu and cp is not None:
+        diff_1_gl = cp.array(
+            [[takeFiniteDifference1(metric[i, j], k, delta, try_gpu) for k in range(4)] for i in range(4) for j in range(4)]
+        ).reshape(4, 4, 4, *s)
+        diff_2_gl = cp.array(
+            [[[takeFiniteDifference2(metric[i, j], k, n, delta, try_gpu) for n in range(4)] for k in range(4)] for i in range(4) for j in range(4)]
+        ).reshape(4, 4, 4, 4, *s)
+    else:
+        diff_1_gl = np.array(
+            [[takeFiniteDifference1(metric[i, j], k, delta, try_gpu) for k in range(4)] for i in range(4) for j in range(4)]
+        ).reshape(4, 4, 4, *s)
+        diff_2_gl = np.array(
+            [[[takeFiniteDifference2(metric[i, j], k, n, delta, try_gpu) for n in range(4)] for k in range(4)] for i in range(4) for j in range(4)]
+        ).reshape(4, 4, 4, 4, *s)
 
     diff1_flat = diff_1_gl.reshape(4, 4, 4, -1)
     diff2_flat = diff_2_gl.reshape(4, 4, 4, 4, -1)
     inv_flat = inv_metric.reshape(4, 4, -1)
 
-    if rust_ricci_t_loops is not None:
+    if try_gpu and cp is not None:
+        diff1_flat = cp.asarray(diff1_flat)
+        diff2_flat = cp.asarray(diff2_flat)
+        inv_flat = cp.asarray(inv_flat)
+
+
+    if try_gpu and cp is not None:
+        ricci_flat = _ricciT_loops_gpu(diff1_flat, diff2_flat, inv_flat)
+        ricci_flat = cp.asnumpy(ricci_flat)
+    elif rust_ricci_t_loops is not None:
         ricci_flat = rust_ricci_t_loops(diff1_flat, diff2_flat, inv_flat)
     else:
         ricci_flat = _ricciT_loops(diff1_flat, diff2_flat, inv_flat)
@@ -176,7 +252,7 @@ def einE(einstein_tensor, inv_metric):
     """
     return np.einsum("...ij,...ik,...jl->...kl", einstein_tensor, inv_metric, inv_metric)
 
-def met2den(tensor, scaling):
+def met2den(tensor, scaling, try_gpu=0):
     """Convert a metric tensor to its stress-energy tensor.
 
     Parameters
@@ -192,12 +268,12 @@ def met2den(tensor, scaling):
         Contravariant stress-energy tensor.
     """
     inv_metric = c4Inv(tensor)
-    ricci_tensor = ricciT(inv_metric, tensor, scaling)
+    ricci_tensor = ricciT(inv_metric, tensor, scaling, try_gpu)
     ricci_scalar = ricciS(ricci_tensor, inv_metric)
     einstein_tensor = einT(ricci_tensor, ricci_scalar, tensor)
     return einE(einstein_tensor, inv_metric)
 
-def met2den2(tensor, scaling):
+def met2den2(tensor, scaling, try_gpu=0):
     """Alternate method to compute the stress-energy tensor from a metric.
 
     Parameters
@@ -213,12 +289,12 @@ def met2den2(tensor, scaling):
         Contravariant stress-energy tensor.
     """
     inv_metric = c4Inv(tensor)
-    ricci_tensor = ricciT(inv_metric, tensor, scaling)
+    ricci_tensor = ricciT(inv_metric, tensor, scaling, try_gpu)
     ricci_scalar = ricciS(ricci_tensor, inv_metric)
     einstein_tensor = einT(ricci_tensor, ricci_scalar, tensor)
     return einE(einstein_tensor, inv_metric)
 
-def get_energy_tensor(metric, diffOrder='fourth'):
+def get_energy_tensor(metric, diffOrder='fourth', try_gpu=0):
     """Compute the contravariant stress-energy tensor from ``metric``.
 
     Parameters
@@ -228,6 +304,8 @@ def get_energy_tensor(metric, diffOrder='fourth'):
     diffOrder : str, optional
         Differentiation order to use (``'second'`` or ``'fourth'``),
         by default ``'fourth'``.
+    try_gpu : int, optional
+        Attempt GPU computation when non-zero and CuPy is available.
 
     Returns
     -------
@@ -247,9 +325,9 @@ def get_energy_tensor(metric, diffOrder='fourth'):
         raise ValueError("Metric index must be 'covariant' for this calculation.")
 
     if diffOrder == 'fourth':
-        energy_tensor = met2den(metric['tensor'], metric['scaling'])
+        energy_tensor = met2den(metric['tensor'], metric['scaling'], try_gpu)
     elif diffOrder == 'second':
-        energy_tensor = met2den2(metric['tensor'], metric['scaling'])
+        energy_tensor = met2den2(metric['tensor'], metric['scaling'], try_gpu)
 
     energy = {
         'type': "Stress-Energy",
