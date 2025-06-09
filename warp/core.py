@@ -20,6 +20,16 @@ def minkowski_metric(grid_size, grid_scaling=(1, 1, 1, 1)):
     return metric_get_minkowski(grid_size, grid_scaling)
 
 
-def energy_tensor(metric, diff_order="fourth"):
-    """Compute the stress-energy tensor for *metric*."""
-    return _get_energy_tensor(metric, diffOrder=diff_order)
+def energy_tensor(metric, diff_order="fourth", try_gpu=0):
+    """Compute the stress-energy tensor for *metric*.
+
+    Parameters
+    ----------
+    metric : dict
+        Metric tensor dictionary.
+    diff_order : str, optional
+        Differentiation order, ``"second"`` or ``"fourth"``.
+    try_gpu : int, optional
+        Attempt GPU execution when non-zero and CuPy is available.
+    """
+    return _get_energy_tensor(metric, diffOrder=diff_order, try_gpu=try_gpu)

@@ -101,6 +101,14 @@ maturin develop
 This command compiles the `warp_core` crate and installs it into the current
 environment. To create a wheel manually you can also run `maturin build`.
 
+## GPU acceleration
+
+Some solver routines can run on a CUDA capable device when
+[CuPy](https://cupy.dev/) is installed. Pass ``try_gpu=1`` to functions such as
+``energy_tensor`` or ``eval_metric`` to enable the GPU kernels. If CuPy is not
+available or no compatible GPU is detected the code automatically falls back to
+NumPy implementations.
+
 ## Testing
 
 The test suite uses `pytest`. After setting up a clean environment and building

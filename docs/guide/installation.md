@@ -19,3 +19,10 @@ The Rust extension will compile automatically as part of the installation proces
 ```bash
 maturin develop
 ```
+
+## GPU requirements
+
+GPU acceleration is optional. Install a CuPy build matching your CUDA toolkit,
+e.g. ``pip install cupy-cuda11x``. When available you can enable GPU kernels by
+passing ``try_gpu=1`` to solver functions. If CuPy is not installed or no CUDA
+device is found the CPU implementations are used instead.

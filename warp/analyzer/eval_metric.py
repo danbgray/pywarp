@@ -26,7 +26,7 @@ def eval_metric(metric: Dict[str, Any], try_gpu: int = 0, keep_positive: int = 1
     output['metric'] = metric
 
     # Energy tensor outputs
-    output['energy_tensor'] = get_energy_tensor(metric)
+    output['energy_tensor'] = get_energy_tensor(metric, try_gpu=try_gpu)
     output['energy_tensor']['type'] = 'energy'
     output['energy_tensor_eulerian'] = do_frame_transfer(metric, output['energy_tensor'], "Eulerian", try_gpu)
 
